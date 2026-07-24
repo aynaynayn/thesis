@@ -3,7 +3,7 @@ import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
 
 export default function CartSidebar() {
-  const { isOpen, closeCart, items, removeItem, updateQuantity, total, clearCart } = useCart();
+  const { isOpen, closeCart, items, removeItem, updateQuantity, total, clearCart, error } = useCart();
   const { navigate } = useRouter();
 
   return (
@@ -51,7 +51,7 @@ export default function CartSidebar() {
             <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
               {items.map((item) => (
                 <div
-                  key={`${item.product.id}-${item.size}`}
+                  key={item.id}
                   className="flex gap-3"
                 >
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
@@ -73,7 +73,7 @@ export default function CartSidebar() {
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity - 1)}
+                        onClick={() => void updateQuantity(item.id, item.quantity - 1)}
                         className="w-6 h-6 rounded-full bg-muted flex items-center justify-center hover:bg-border transition-colors"
                       >
                         <Minus size={12} />
@@ -82,7 +82,7 @@ export default function CartSidebar() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.size, item.quantity + 1)}
+                        onClick={() => void updateQuantity(item.id, item.quantity + 1)}
                         className="w-6 h-6 rounded-full bg-muted flex items-center justify-center hover:bg-border transition-colors"
                       >
                         <Plus size={12} />
@@ -90,7 +90,7 @@ export default function CartSidebar() {
                     </div>
                   </div>
                   <button
-                    onClick={() => removeItem(item.product.id, item.size)}
+                    onClick={() => void removeItem(item.id)}
                     className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
                   >
                     <Trash2 size={14} />
@@ -121,8 +121,9 @@ export default function CartSidebar() {
               >
                 Continue Shopping
               </button>
+              {error && <p className="text-xs text-destructive">{error}</p>}
               <button
-                onClick={clearCart}
+                onClick={() => void clearCart()}
                 className="text-xs text-muted-foreground hover:text-destructive transition-colors text-center"
               >
                 Clear cart
