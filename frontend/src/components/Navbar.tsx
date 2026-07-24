@@ -2,11 +2,13 @@ import { ShoppingBag, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
+import { useAuth } from "../context/AuthContext";
 import pawfitLogo from "../assets/logo";
 
 export default function Navbar() {
   const { count, openCart } = useCart();
   const { navigate, page } = useRouter();
+  const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const navLinks = [
@@ -46,11 +48,11 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => navigate("auth")}
+            onClick={() => user ? navigate(user.role === "admin" ? "admin" : "account") : navigate("auth")}
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <User size={16} />
-            <span>Sign In</span>
+            <span>{user ? user.name : "Sign In"}</span>
           </button>
 
           <button
@@ -88,11 +90,12 @@ export default function Navbar() {
             </button>
           ))}
           <button
-            onClick={() => { navigate("auth"); setMenuOpen(false); }}
+            onClick={() => { navigate(user ? (user.role === "admin" ? "admin" : "account") : "auth"); setMenuOpen(false); }}
             className="text-left text-base font-semibold py-1 text-muted-foreground"
           >
-            Sign In
+            {user ? user.name : "Sign In"}
           </button>
+          {user && <button onClick={() => { void logout(); setMenuOpen(false); }} className="text-left text-sm text-muted-foreground">Sign Out</button>}
         </div>
       )}
     </header>
