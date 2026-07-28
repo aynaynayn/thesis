@@ -211,12 +211,39 @@ export async function uploadProductModel(req, res, next) {
   }
 }
 
+export async function deleteProductModel(req, res, next) {
+  try {
+    const breed = decodeURIComponent(req.params.breed).trim();
+    const product = await Product.findById(req.params.id);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    const index = product.models.findIndex((model) => model.breed.toLowerCase() === breed.toLowerCase());
+    if (index === -1) return res.status(404).json({ message: "3D model not found" });
+
+    const [model] = product.models.splice(index, 1);
+    try {
+      await fs.unlink(absoluteModelPath(model.modelPath));
+    } catch (error) {
+      if (error.code !== "ENOENT") throw error;
+    }
+    await product.save();
+    res.json({ product });
+  } catch (error) { next(error); }
+}
+
 export async function deleteProduct(req, res, next) {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
-    product.isActive = false;
-    await product.save();
+    await Product.deleteOne({ _id: product._id });
+    await Promise.all([
+      ...product.models.map(async (model) => {
+        try { await fs.unlink(absoluteModelPath(model.modelPath)); } catch (_error) {}
+      }),
+      (async () => {
+        if (!product.image) return;
+        try { await fs.unlink(absoluteProductImagePath(product.image)); } catch (_error) {}
+      })(),
+    ]);
     res.status(204).end();
   } catch (error) { next(error); }
 }

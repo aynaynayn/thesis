@@ -78,6 +78,10 @@ export const productsApi = {
     const data = await request<{ product: ApiProduct }>(`/products/${id}/models`, { method: "POST", body: formData });
     return toProduct(data.product);
   },
+  async deleteModel(id: string, breed: string) {
+    const data = await request<{ product: ApiProduct }>(`/products/${id}/models/${encodeURIComponent(breed)}`, { method: "DELETE" });
+    return toProduct(data.product);
+  },
   async uploadImage(id: string, file: File) {
     const formData = new FormData();
     formData.append("image", file);
