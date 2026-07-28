@@ -4,6 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
+import path from "path";
+import { fileURLToPath } from "url";
 import authRoutes from "./routes/authRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
@@ -18,6 +20,7 @@ const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
   .split(",")
   .map((origin) => origin.trim())
   .filter(Boolean);
+const backendRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
@@ -32,6 +35,7 @@ app.use(cors({
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
 app.use(express.json({ limit: "1mb" }));
+app.use("/uploads", express.static(path.join(backendRoot, "uploads")));
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 300, standardHeaders: "draft-8", legacyHeaders: false }));
 
 app.get("/", (_req, res) => res.json({ message: "PawFit API is running" }));

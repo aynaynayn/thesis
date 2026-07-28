@@ -1,6 +1,7 @@
 import type { Product } from "../data/products";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
+export const AUTH_TOKEN_STORAGE_KEY = "pawfit_auth_token";
 
 type ApiProduct = Omit<Product, "id" | "stock"> & { _id: string };
 
@@ -13,9 +14,15 @@ function toProduct(product: ApiProduct): Product {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const token = typeof window === "undefined" ? null : window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+  const isFormData = options.body instanceof FormData;
   const response = await fetch(`${API_URL}${path}`, {
     credentials: "include",
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers: {
+      ...(!isFormData ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
     ...options,
   });
   if (response.status === 204) return undefined as T;
@@ -24,11 +31,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin"; isVerified: boolean };
+export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin" };
 
 export const authApi = {
   register: (body: { name: string; email: string; password: string; phone?: string }) => request<{ message: string; user: User }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
-  login: (body: { email: string; password: string }) => request<{ user: User }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
+  login: (body: { email: string; password: string }) => request<{ token: string; user: User }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/auth/me"),
   verifyEmail: (token: string) => request<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
@@ -52,7 +59,7 @@ export const productsApi = {
     const data = await request<{ products: ApiProduct[] }>("/products/admin/all");
     return data.products.map(toProduct);
   },
-  async create(product: Omit<Product, "id" | "slug" | "stock" | "availableBreeds" | "isActive">) {
+  async create(product: Omit<Product, "id" | "slug" | "stock" | "availableBreeds" | "isActive" | "models">) {
     const data = await request<{ product: ApiProduct }>("/products", { method: "POST", body: JSON.stringify(product) });
     return toProduct(data.product);
   },
@@ -63,6 +70,24 @@ export const productsApi = {
   async adjustInventory(id: string, body: { breed: string; size: string; quantity: number; reason: string }) {
     const data = await request<{ product: ApiProduct }>(`/products/${id}/inventory`, { method: "PATCH", body: JSON.stringify(body) });
     return toProduct(data.product);
+  },
+  async uploadModel(id: string, breed: string, file: File) {
+    const formData = new FormData();
+    formData.append("breed", breed);
+    formData.append("model", file);
+    const data = await request<{ product: ApiProduct }>(`/products/${id}/models`, { method: "POST", body: formData });
+    return toProduct(data.product);
+  },
+  async uploadImage(id: string, file: File) {
+    const formData = new FormData();
+    formData.append("image", file);
+    const data = await request<{ product: ApiProduct }>(`/products/${id}/image`, { method: "POST", body: formData });
+    return toProduct(data.product);
+  },
+  async uploadPendingImage(file: File) {
+    const formData = new FormData();
+    formData.append("image", file);
+    return request<{ imagePath: string }>("/products/image-upload", { method: "POST", body: formData });
   },
   remove: (id: string) => request<void>(`/products/${id}`, { method: "DELETE" }),
 };

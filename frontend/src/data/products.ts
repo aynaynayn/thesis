@@ -14,6 +14,11 @@ export type InventoryItem = {
   lowStockThreshold: number;
 };
 
+export type ProductModel = {
+  breed: string;
+  modelPath: string;
+};
+
 export type Product = {
   id: string;
   name: string;
@@ -25,6 +30,7 @@ export type Product = {
   images: string[];
   availableBreeds: Breed[];
   sizeCharts: SizeChart[];
+  models: ProductModel[];
   inventory: InventoryItem[];
   stock: number;
   featured: boolean;

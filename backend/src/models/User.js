@@ -28,6 +28,8 @@ const userSchema = new mongoose.Schema(
       match: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
     password: { type: String, required: true, select: false },
+    passwordResetToken: { type: String, select: false },
+    passwordResetTokenExpires: { type: Date, select: false },
     phone: { type: String, trim: true, maxlength: 30 },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     addresses: [addressSchema],

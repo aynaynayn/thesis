@@ -26,6 +26,14 @@ const sizeChartSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const modelSchema = new mongoose.Schema(
+  {
+    breed: { type: String, required: true, trim: true },
+    modelPath: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 160 },
@@ -39,6 +47,17 @@ const productSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true, index: true },
     availableBreeds: { type: [String], default: [] },
     sizeCharts: { type: [sizeChartSchema], default: [] },
+    models: {
+      type: [modelSchema],
+      default: [],
+      validate: {
+        validator(models) {
+          const breeds = models.map((model) => model.breed.toLowerCase());
+          return new Set(breeds).size === breeds.length;
+        },
+        message: "A product can only have one 3D model per breed",
+      },
+    },
     inventory: { type: [inventorySchema], default: [] },
   },
   { timestamps: true },
