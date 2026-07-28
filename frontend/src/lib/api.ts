@@ -1,6 +1,7 @@
 import type { Product } from "../data/products";
 
 const API_URL = import.meta.env.VITE_API_URL || "/api";
+
 export const AUTH_TOKEN_STORAGE_KEY = "pawfit_auth_token";
 
 type ApiProduct = Omit<Product, "id" | "stock"> & { _id: string };
