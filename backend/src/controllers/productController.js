@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
+import fs from "fs/promises";
+import path from "path";
 import Product from "../models/Product.js";
+import { absoluteModelPath, productModelPath } from "../middleware/modelUploadMiddleware.js";
+import { absoluteProductImagePath, isPendingProductImagePath, pendingProductImagePath, productImagePath } from "../middleware/productImageUploadMiddleware.js";
 
 const editableFields = ["name", "slug", "description", "category", "price", "image", "images", "featured", "isActive", "availableBreeds", "sizeCharts", "inventory"];
 
@@ -88,14 +92,59 @@ export async function listAdminProducts(_req, res, next) {
 }
 
 export async function createProduct(req, res, next) {
+  let pendingImagePath;
+  let finalImagePath;
+  let createdProduct;
   try {
     const data = Object.fromEntries(editableFields.filter((key) => req.body[key] !== undefined).map((key) => [key, req.body[key]]));
     if (!data.name || !data.description || !data.category || !data.image || data.price === undefined) return res.status(400).json({ message: "Name, description, category, image, and price are required" });
     data.slug = await uniqueSlug(data.slug || data.name);
     normalizeProductData(data);
-    const product = await Product.create(data);
-    res.status(201).json({ product });
-  } catch (error) { next(error); }
+    pendingImagePath = isPendingProductImagePath(data.image) ? data.image : null;
+    createdProduct = await Product.create(data);
+    if (pendingImagePath) {
+      finalImagePath = productImagePath(String(createdProduct._id), `product${path.extname(pendingImagePath)}`);
+      const finalAbsolutePath = absoluteProductImagePath(finalImagePath);
+      await fs.mkdir(path.dirname(finalAbsolutePath), { recursive: true });
+      await fs.rename(absoluteProductImagePath(pendingImagePath), finalAbsolutePath);
+      createdProduct.image = finalImagePath;
+      await createdProduct.save();
+    }
+    res.status(201).json({ product: createdProduct });
+  } catch (error) {
+    if (createdProduct) await Product.deleteOne({ _id: createdProduct._id }).catch(() => {});
+    if (pendingImagePath) await fs.unlink(absoluteProductImagePath(pendingImagePath)).catch(() => {});
+    if (finalImagePath) await fs.unlink(absoluteProductImagePath(finalImagePath)).catch(() => {});
+    next(error);
+  }
+}
+
+export function uploadPendingImage(req, res, next) {
+  if (!req.file) return next(Object.assign(new Error("A product image file is required"), { statusCode: 400 }));
+  return res.status(201).json({ imagePath: pendingProductImagePath(req.file.filename) });
+}
+
+export async function uploadProductImage(req, res, next) {
+  const uploadedFile = req.file;
+  try {
+    if (!uploadedFile) throw Object.assign(new Error("A product image file is required"), { statusCode: 400 });
+    const product = await Product.findById(req.params.id);
+    if (!product) throw Object.assign(new Error("Product not found"), { statusCode: 404 });
+
+    const imagePath = productImagePath(String(product._id), uploadedFile.filename);
+    const previousImage = product.image;
+    product.image = imagePath;
+    await product.save();
+
+    if (previousImage && previousImage !== imagePath) {
+      await fs.unlink(absoluteProductImagePath(previousImage)).catch(() => {});
+    }
+
+    res.status(200).json({ product });
+  } catch (error) {
+    if (uploadedFile) await fs.unlink(path.resolve(uploadedFile.path)).catch(() => {});
+    next(error);
+  }
 }
 
 export async function updateProduct(req, res, next) {
@@ -124,6 +173,42 @@ export async function adjustInventory(req, res, next) {
     if (!product) return res.status(409).json({ message: "Inventory variant was not found or has insufficient stock" });
     res.json({ product, adjustment: { breed: breed.trim(), size: normalizedSize, quantity, reason: reason?.trim() || null } });
   } catch (error) { next(error); }
+}
+
+export async function uploadProductModel(req, res, next) {
+  const uploadedFile = req.file;
+  try {
+    const breed = req.body.breed?.trim();
+    if (!breed) throw Object.assign(new Error("Breed is required"), { statusCode: 400 });
+    if (!uploadedFile) throw Object.assign(new Error("A GLB model file is required"), { statusCode: 400 });
+
+    const product = await Product.findById(req.params.id);
+    if (!product) throw Object.assign(new Error("Product not found"), { statusCode: 404 });
+
+    const modelPath = productModelPath(String(product._id), uploadedFile.filename);
+    const existingIndex = product.models.findIndex(
+      (model) => model.breed.toLowerCase() === breed.toLowerCase(),
+    );
+    const isReplacement = existingIndex !== -1;
+    const previousPath = existingIndex === -1 ? null : product.models[existingIndex].modelPath;
+
+    if (existingIndex === -1) product.models.push({ breed, modelPath });
+    else product.models[existingIndex] = { breed, modelPath };
+
+    await product.save();
+
+    if (previousPath && previousPath !== modelPath) {
+      await fs.unlink(absoluteModelPath(previousPath)).catch(() => {});
+    }
+
+    res.status(isReplacement ? 200 : 201).json({
+      product,
+      model: product.models.find((model) => model.breed.toLowerCase() === breed.toLowerCase()),
+    });
+  } catch (error) {
+    if (uploadedFile) await fs.unlink(path.resolve(uploadedFile.path)).catch(() => {});
+    next(error);
+  }
 }
 
 export async function deleteProduct(req, res, next) {

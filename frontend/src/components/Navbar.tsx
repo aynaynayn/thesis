@@ -95,7 +95,7 @@ export default function Navbar() {
           >
             {user ? user.name : "Sign In"}
           </button>
-          {user && <button onClick={() => { void logout(); setMenuOpen(false); }} className="text-left text-sm text-muted-foreground">Sign Out</button>}
+          {user && <button onClick={() => { void logout().finally(() => { navigate("home"); setMenuOpen(false); }); }} className="text-left text-sm text-muted-foreground">Sign Out</button>}
         </div>
       )}
     </header>

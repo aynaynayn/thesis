@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { authApi, type User } from "../lib/api";
+import { AUTH_TOKEN_STORAGE_KEY, authApi, type User } from "../lib/api";
 
 type AuthContextValue = {
   user: User | null;
@@ -25,13 +25,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const result = await authApi.login({ email, password });
+    window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, result.token);
     setUser(result.user);
     return result.user;
   };
 
   const logout = async () => {
-    await authApi.logout();
-    setUser(null);
+    try {
+      await authApi.logout();
+    } catch {
+      // Clearing the local token is sufficient to end this browser session.
+    } finally {
+      window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
+      setUser(null);
+    }
   };
 
   return <AuthContext.Provider value={{ user, loading, login, logout, refresh }}>{children}</AuthContext.Provider>;

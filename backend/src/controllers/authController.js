@@ -93,6 +93,15 @@ export async function login(req, res, next) {
   }
 }
 
+export function logout(_req, res) {
+  res.clearCookie("pawfit_session", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
+  res.status(204).end();
+}
+
 export async function requestPasswordReset(req, res, next) {
   try {
     const { email } = req.body;
