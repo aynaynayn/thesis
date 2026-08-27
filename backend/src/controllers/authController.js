@@ -6,13 +6,29 @@ const passwordPattern =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 function publicUser(user) {
+  const petProfile = user.petProfile?.breed ? user.petProfile : null;
   return {
     id: user._id,
     name: user.name,
     email: user.email,
     phone: user.phone,
     role: user.role,
+    petProfile,
   };
+}
+
+function petProfileFrom(body) {
+  const { breed, neckCm, chestCm, backCm } = body;
+  const values = { breed: String(breed || "").trim(), neckCm, chestCm, backCm };
+  const hasAnyValue = values.breed || [neckCm, chestCm, backCm].some((value) => value !== undefined && value !== "");
+  if (!hasAnyValue) return {};
+  if (!values.breed) throw Object.assign(new Error("A dog breed is required"), { statusCode: 400 });
+  for (const [label, value] of [["neck", neckCm], ["chest", chestCm], ["back", backCm]]) {
+    if (!Number.isFinite(Number(value)) || Number(value) <= 0 || Number(value) > 300) {
+      throw Object.assign(new Error(`${label} measurement must be between 0 and 300 cm`), { statusCode: 400 });
+    }
+  }
+  return { breed: values.breed, neckCm: Number(neckCm), chestCm: Number(chestCm), backCm: Number(backCm) };
 }
 
 function createToken(user) {
@@ -190,4 +206,14 @@ export function getMe(req, res) {
   res.json({
     user: publicUser(req.user),
   });
+}
+
+export async function updateProfile(req, res, next) {
+  try {
+    req.user.petProfile = petProfileFrom(req.body);
+    await req.user.save();
+    res.json({ user: publicUser(req.user) });
+  } catch (error) {
+    next(error);
+  }
 }

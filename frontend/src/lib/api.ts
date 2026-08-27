@@ -31,13 +31,15 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin" };
+export type PetProfile = { breed: string; neckCm: number; chestCm: number; backCm: number };
+export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin"; petProfile?: PetProfile | null };
 
 export const authApi = {
   register: (body: { name: string; email: string; password: string; phone?: string }) => request<{ message: string; user: User }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body: { email: string; password: string }) => request<{ token: string; user: User }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/auth/me"),
+  updateProfile: (petProfile: PetProfile | null) => request<{ user: User }>("/auth/profile", { method: "PATCH", body: JSON.stringify(petProfile || {}) }),
   verifyEmail: (token: string) => request<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
   resendVerification: (email: string) => request<{ message: string }>("/auth/resend-verification", { method: "POST", body: JSON.stringify({ email }) }),
   forgotPassword: (email: string) => request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),

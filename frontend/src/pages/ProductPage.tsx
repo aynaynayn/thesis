@@ -16,7 +16,7 @@ export default function ProductPage({ productId }: { productId: string }) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeChartOpen, setSizeChartOpen] = useState(false);
   const [added, setAdded] = useState(false);
-  useEffect(() => { setProduct(null); setError(""); void productsApi.get(productId).then(setProduct).catch((requestError: Error) => setError(requestError.message)); }, [productId]);
+  useEffect(() => { setProduct(null); setError(""); void productsApi.get(productId).then((loadedProduct) => { setProduct(loadedProduct); const savedBreed = user?.petProfile?.breed; setSelectedBreed(savedBreed && loadedProduct.availableBreeds.includes(savedBreed as Breed) ? savedBreed as Breed : null); }).catch((requestError: Error) => setError(requestError.message)); }, [productId, user]);
   const sizes = useMemo(() => product && selectedBreed ? product.inventory.filter((item) => item.breed === selectedBreed) : [], [product, selectedBreed]);
   const sizeChart: SizeChart | undefined = product && selectedBreed ? product.sizeCharts.find((chart) => chart.breed === selectedBreed) : undefined;
   if (error) return <Empty message={error} back={() => navigate("shop")} />;

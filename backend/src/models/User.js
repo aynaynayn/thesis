@@ -16,6 +16,16 @@ const addressSchema = new mongoose.Schema(
   { _id: true },
 );
 
+const petProfileSchema = new mongoose.Schema(
+  {
+    breed: { type: String, trim: true, maxlength: 80 },
+    neckCm: { type: Number, min: 0, max: 300 },
+    chestCm: { type: Number, min: 0, max: 300 },
+    backCm: { type: Number, min: 0, max: 300 },
+  },
+  { _id: false },
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 120 },
@@ -33,6 +43,7 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true, maxlength: 30 },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     addresses: [addressSchema],
+    petProfile: { type: petProfileSchema, default: () => ({}) },
   },
   { timestamps: true },
 );
