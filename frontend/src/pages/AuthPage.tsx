@@ -53,7 +53,7 @@ export default function AuthPage() {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Unable to complete the request"
+          : "Unable to complete the request",
       );
     } finally {
       setSubmitting(false);
@@ -64,8 +64,8 @@ export default function AuthPage() {
     mode === "login"
       ? "Sign In"
       : mode === "register"
-      ? "Create your account"
-      : "Reset your password";
+        ? "Create your account"
+        : "Reset your password";
 
   return (
     <main className="min-h-[80vh] flex items-center justify-center px-4 py-12">
@@ -87,8 +87,8 @@ export default function AuthPage() {
             {mode === "register"
               ? "Create your PawFit account."
               : mode === "forgot"
-              ? "We'll send a secure password reset link if the account exists."
-              : "Sign in to your PawFit account."}
+                ? "We'll send a secure password reset link if the account exists."
+                : "Sign in to your PawFit account."}
           </p>
 
           {message && (
@@ -152,11 +152,7 @@ export default function AuthPage() {
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
                   >
-                    {showPassword ? (
-                      <EyeOff size={16} />
-                    ) : (
-                      <Eye size={16} />
-                    )}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </Field>
@@ -164,8 +160,8 @@ export default function AuthPage() {
 
             {mode === "register" && (
               <p className="text-xs text-muted-foreground">
-                Use at least 8 characters with uppercase, lowercase, number,
-                and special character.
+                Use at least 8 characters with uppercase, lowercase, number, and
+                special character.
               </p>
             )}
 
@@ -176,10 +172,10 @@ export default function AuthPage() {
               {submitting
                 ? "Please wait..."
                 : mode === "login"
-                ? "Sign In"
-                : mode === "register"
-                ? "Create Account"
-                : "Send Reset Link"}
+                  ? "Sign In"
+                  : mode === "register"
+                    ? "Create Account"
+                    : "Send Reset Link"}
             </button>
           </form>
 
