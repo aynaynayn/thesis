@@ -32,15 +32,18 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return data as T;
 }
 
-export type PetProfile = { breed: string; neckCm: number; chestCm: number; backCm: number };
-export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin"; petProfile?: PetProfile | null };
+export type PetProfile = { id: string; name: string; breed: string; neckGirthCm: number; chestGirthCm: number; backLengthCm: number };
+export type PetProfileInput = Omit<PetProfile, "id">;
+export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin"; petProfiles: PetProfile[] };
 
 export const authApi = {
   register: (body: { name: string; email: string; password: string; phone?: string }) => request<{ message: string; user: User }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
   login: (body: { email: string; password: string }) => request<{ token: string; user: User }>("/auth/login", { method: "POST", body: JSON.stringify(body) }),
   logout: () => request<void>("/auth/logout", { method: "POST" }),
   me: () => request<{ user: User }>("/auth/me"),
-  updateProfile: (petProfile: PetProfile | null) => request<{ user: User }>("/auth/profile", { method: "PATCH", body: JSON.stringify(petProfile || {}) }),
+  createPetProfile: (petProfile: PetProfileInput) => request<{ user: User }>("/auth/pet-profiles", { method: "POST", body: JSON.stringify(petProfile) }),
+  updatePetProfile: (id: string, petProfile: PetProfileInput) => request<{ user: User }>(`/auth/pet-profiles/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(petProfile) }),
+  deletePetProfile: (id: string) => request<{ user: User }>(`/auth/pet-profiles/${encodeURIComponent(id)}`, { method: "DELETE" }),
   verifyEmail: (token: string) => request<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`),
   resendVerification: (email: string) => request<{ message: string }>("/auth/resend-verification", { method: "POST", body: JSON.stringify({ email }) }),
   forgotPassword: (email: string) => request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
@@ -99,13 +102,13 @@ export const productsApi = {
   remove: (id: string) => request<void>(`/products/${id}`, { method: "DELETE" }),
 };
 
-export type CartItem = { id: string; product: Product; breed: string; size: string; quantity: number };
-type ApiCartItem = { id: string; _id?: string; product: ApiProduct; breed: string; size: string; quantity: number };
-function toCartItems(items: ApiCartItem[]): CartItem[] { return items.map((item) => ({ id: item.id || item._id || "", product: toProduct(item.product), breed: item.breed, size: item.size, quantity: item.quantity })); }
+export type CartItem = { id: string; product: Product; breed: string; petBreed?: string; size: string; quantity: number };
+type ApiCartItem = { id: string; _id?: string; product: ApiProduct; breed: string; petBreed?: string; size: string; quantity: number };
+function toCartItems(items: ApiCartItem[]): CartItem[] { return items.map((item) => ({ id: item.id || item._id || "", product: toProduct(item.product), breed: item.breed, petBreed: item.petBreed, size: item.size, quantity: item.quantity })); }
 
 export const cartApi = {
   async get() { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart"); return toCartItems(data.cart.items); },
-  async add(productId: string, breed: string, size: string, quantity = 1) { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart/items", { method: "POST", body: JSON.stringify({ productId, breed, size, quantity }) }); return toCartItems(data.cart.items); },
+  async add(productId: string, size: string, petBreed?: string, quantity = 1) { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart/items", { method: "POST", body: JSON.stringify({ productId, size, petBreed, quantity }) }); return toCartItems(data.cart.items); },
   async update(itemId: string, quantity: number) { const data = await request<{ cart: { items: ApiCartItem[] } }>(`/cart/items/${itemId}`, { method: "PATCH", body: JSON.stringify({ quantity }) }); return toCartItems(data.cart.items); },
   async remove(itemId: string) { const data = await request<{ cart: { items: ApiCartItem[] } }>(`/cart/items/${itemId}`, { method: "DELETE" }); return toCartItems(data.cart.items); },
   clear: () => request<void>("/cart", { method: "DELETE" }),

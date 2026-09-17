@@ -4,6 +4,7 @@ const cartItemSchema = new mongoose.Schema(
   {
     product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
     breed: { type: String, required: true, trim: true },
+    petBreed: { type: String, trim: true, maxlength: 80 },
     size: { type: String, required: true, trim: true, uppercase: true },
     quantity: { type: Number, required: true, min: 1, max: 20 },
   },

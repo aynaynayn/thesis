@@ -23,15 +23,12 @@ export default function HomePage() {
           <img
             src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1400&h=900&fit=crop&auto=format"
             alt="Dog wearing PawFit apparel"
-            className="w-full h-full object-cover opacity-20"
+            className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent" />
         </div>
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/20 text-primary text-sm font-bold mb-6">
-            Breed-specific fit
-          </span>
-          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight">
+          <h1 className="tracking-[0.05em] text-4xl sm:text-5xl lg:text-6xl font-extrabold text-foreground leading-tight">
             Apparel made
             <br />
             <span className="text-primary">for your dog,</span>

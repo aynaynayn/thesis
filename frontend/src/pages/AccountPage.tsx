@@ -1,26 +1,25 @@
-import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "../context/RouterContext";
-import { authApi, type PetProfile } from "../lib/api";
+import { authApi, type PetProfile, type PetProfileInput } from "../lib/api";
 
-const emptyProfile: PetProfile = {
+const emptyProfile: PetProfileInput = {
+  name: "",
   breed: "",
-  neckCm: 0,
-  chestCm: 0,
-  backCm: 0,
+  neckGirthCm: 0,
+  chestGirthCm: 0,
+  backLengthCm: 0,
 };
 
 export default function AccountPage() {
   const { user, loading, logout, refresh } = useAuth();
   const { navigate } = useRouter();
-  const [profile, setProfile] = useState<PetProfile>(emptyProfile);
+  const [draft, setDraft] = useState<PetProfileInput>(emptyProfile);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  useEffect(() => {
-    if (user?.petProfile) setProfile(user.petProfile);
-  }, [user]);
+
   if (loading)
     return (
       <main className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
@@ -30,35 +29,53 @@ export default function AccountPage() {
   if (!user)
     return (
       <main className="min-h-[60vh] flex items-center justify-center px-4">
-        <div className="text-center">
-          <h1 className="text-2xl font-extrabold text-foreground">
+        <div>
+          <h1 className="text-4xl text-foreground">
             Sign in to view your account
           </h1>
           <button
             onClick={() => navigate("auth")}
-            className="mt-5 px-5 py-3 rounded-full bg-primary text-primary-foreground font-bold"
+            className="mt-5 border-b border-primary pb-1 text-xs font-bold uppercase tracking-[0.12em] text-primary"
           >
-            Sign In
+            Sign in
           </button>
         </div>
       </main>
     );
-  const update = (field: keyof PetProfile, value: string) =>
-    setProfile((current) => ({
+
+  const update = (field: keyof PetProfileInput, value: string) =>
+    setDraft((current) => ({
       ...current,
-      [field]: field === "breed" ? value : Number(value),
+      [field]: field === "name" || field === "breed" ? value : Number(value),
     }));
+  const beginEdit = (profile: PetProfile) => {
+    setDraft({
+      name: profile.name,
+      breed: profile.breed,
+      neckGirthCm: profile.neckGirthCm,
+      chestGirthCm: profile.chestGirthCm,
+      backLengthCm: profile.backLengthCm,
+    });
+    setEditingId(profile.id);
+    setMessage("");
+    setError("");
+  };
+  const reset = () => {
+    setDraft(emptyProfile);
+    setEditingId(null);
+    setError("");
+  };
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
-    setMessage("");
     setError("");
+    setMessage("");
     try {
-      await authApi.updateProfile(profile);
+      if (editingId) await authApi.updatePetProfile(editingId, draft);
+      else await authApi.createPetProfile(draft);
       await refresh();
-      setMessage(
-        "Pet profile saved. Your measurements are ready for future purchases.",
-      );
+      reset();
+      setMessage(editingId ? "Pet profile updated." : "Pet profile added.");
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -69,117 +86,176 @@ export default function AccountPage() {
       setSaving(false);
     }
   };
-  const clear = async () => {
+  const remove = async (id: string) => {
     setSaving(true);
-    setMessage("");
     setError("");
+    setMessage("");
     try {
-      await authApi.updateProfile(null);
-      setProfile(emptyProfile);
+      await authApi.deletePetProfile(id);
       await refresh();
-      setMessage("Pet profile cleared.");
+      if (editingId === id) reset();
+      setMessage("Pet profile deleted.");
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Unable to clear pet profile",
+          : "Unable to delete pet profile",
       );
     } finally {
       setSaving(false);
     }
   };
+
   return (
-    <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
-      <h1 className="text-3xl font-extrabold text-foreground">My Account</h1>
-      <div className="mt-6 rounded-3xl border border-border bg-card p-6">
-        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+    <main className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        Account / pet records
+      </p>
+      <h1 className="mt-2 text-5xl text-foreground">My account</h1>
+      <section className="mt-8 rounded-2xl border border-border bg-card p-6">
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
           Account details
         </p>
-        <p className="mt-4 font-bold text-foreground">{user.name}</p>
+        <p className="mt-3 font-bold text-foreground">{user.name}</p>
         <p className="text-muted-foreground">{user.email}</p>
         {user.phone && <p className="text-muted-foreground">{user.phone}</p>}
         <button
           onClick={() => void logout().then(() => navigate("home"))}
-          className="mt-6 px-5 py-2.5 rounded-full border border-border text-sm font-semibold text-foreground"
+          className="mt-5 border-b border-muted-foreground pb-1 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"
         >
-          Sign Out
+          Sign out
         </button>
-      </div>
-      <form
-        onSubmit={save}
-        className="mt-6 rounded-3xl border border-border bg-card p-6"
-      >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-extrabold text-foreground">
-              Pet profile
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Save your dog's breed and measurements to make sizing faster next
-              time.
-            </p>
+      </section>
+      <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
+        <div className="rounded-2xl border border-border bg-card p-6">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            Saved pets
+          </p>
+          <h2 className="mt-2 text-3xl text-foreground">Pet profiles</h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Keep a separate breed and measurement record for each dog.
+          </p>
+          <div className="mt-6 space-y-3">
+            {user.petProfiles.length ? (
+              user.petProfiles.map((profile) => (
+                <article
+                  key={profile.id}
+                  className="rounded-xl border border-border bg-background p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-bold text-foreground">
+                        {profile.name}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {profile.breed}
+                      </p>
+                    </div>
+                    <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-primary">
+                      {profile.neckGirthCm} / {profile.chestGirthCm} / {profile.backLengthCm} cm
+                    </p>
+                  </div>
+                  <div className="mt-3 flex gap-4">
+                    <button
+                      type="button"
+                      onClick={() => beginEdit(profile)}
+                      className="border-b border-primary pb-0.5 text-xs font-bold uppercase tracking-[0.1em] text-primary"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => void remove(profile.id)}
+                      className="border-b border-transparent pb-0.5 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground hover:border-destructive hover:text-destructive"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </article>
+              ))
+            ) : (
+              <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+                No pet profiles yet. Add a pet to keep its measurements on file.
+              </p>
+            )}
           </div>
-          <span className="rounded-full bg-secondary px-3 py-1 text-xs font-bold text-secondary-foreground">
-            cm
-          </span>
         </div>
-        {error && (
-          <p className="mt-4 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
-            {error}
+        <form
+          onSubmit={save}
+          className="rounded-2xl border border-border bg-card p-6"
+        >
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            {editingId ? "Edit profile" : "New profile"}
           </p>
-        )}
-        {message && (
-          <p className="mt-4 rounded-xl bg-green-50 p-3 text-sm text-green-800">
-            {message}
-          </p>
-        )}
-        <label className="mt-5 flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
-          Breed
-          <input
-            required
-            value={profile.breed}
-            onChange={(event) => update("breed", event.target.value)}
-            placeholder="e.g. Labrador"
-            className="input"
-          />
-        </label>
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <PetField
-            label="Neck"
-            value={profile.neckCm}
-            onChange={(value) => update("neckCm", value)}
-          />
-          <PetField
-            label="Chest"
-            value={profile.chestCm}
-            onChange={(value) => update("chestCm", value)}
-          />
-          <PetField
-            label="Back"
-            value={profile.backCm}
-            onChange={(value) => update("backCm", value)}
-          />
-        </div>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button
-            disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-bold disabled:opacity-50"
-          >
-            <Save size={16} />
-            {saving ? "Saving..." : "Save Pet Profile"}
-          </button>
-          {user.petProfile && (
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => void clear()}
-              className="px-5 py-2.5 rounded-full border border-border text-sm font-semibold text-foreground disabled:opacity-50"
-            >
-              Clear profile
-            </button>
+          <h2 className="mt-2 text-3xl text-foreground">
+            {editingId ? "Update a pet" : "Add a pet"}
+          </h2>
+          {error && (
+            <p className="mt-4 border-l-2 border-destructive bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </p>
           )}
-        </div>
-      </form>
+          {message && (
+            <p className="mt-4 border-l-2 border-primary bg-secondary p-3 text-sm text-primary">
+              {message}
+            </p>
+          )}
+          <label className="mt-5 flex flex-col gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            Pet name
+            <input
+              required
+              value={draft.name}
+              onChange={(event) => update("name", event.target.value)}
+              className="input normal-case tracking-normal"
+            />
+          </label>
+          <label className="mt-4 flex flex-col gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
+            Breed
+            <input
+              required
+              value={draft.breed}
+              onChange={(event) => update("breed", event.target.value)}
+              placeholder="e.g. Labrador"
+              className="input normal-case tracking-normal"
+            />
+          </label>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <PetField
+              label="Neck"
+              value={draft.neckGirthCm}
+              onChange={(value) => update("neckGirthCm", value)}
+            />
+            <PetField
+              label="Chest"
+              value={draft.chestGirthCm}
+              onChange={(value) => update("chestGirthCm", value)}
+            />
+            <PetField
+              label="Back"
+              value={draft.backLengthCm}
+              onChange={(value) => update("backLengthCm", value)}
+            />
+          </div>
+          <div className="mt-6 flex gap-4">
+            <button
+              disabled={saving}
+              className="border border-primary bg-primary px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground disabled:opacity-50"
+            >
+              {saving ? "Saving" : editingId ? "Save changes" : "Add pet"}
+            </button>
+            {editingId && (
+              <button
+                type="button"
+                onClick={reset}
+                className="border-b border-muted-foreground pb-1 text-xs font-bold uppercase tracking-[0.12em] text-muted-foreground"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </form>
+      </section>
     </main>
   );
 }
@@ -194,7 +270,7 @@ function PetField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
+    <label className="flex flex-col gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-muted-foreground">
       {label}
       <input
         required
@@ -205,7 +281,7 @@ function PetField({
         value={value || ""}
         onChange={(event) => onChange(event.target.value)}
         placeholder="cm"
-        className="input"
+        className="input normal-case tracking-normal"
       />
     </label>
   );

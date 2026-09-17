@@ -5,7 +5,7 @@ import Product from "../models/Product.js";
 import { absoluteModelPath, productModelPath } from "../middleware/modelUploadMiddleware.js";
 import { absoluteProductImagePath, isPendingProductImagePath, pendingProductImagePath, productImagePath } from "../middleware/productImageUploadMiddleware.js";
 
-const editableFields = ["name", "slug", "description", "category", "price", "image", "images", "featured", "isActive", "availableBreeds", "sizeCharts", "inventory"];
+const editableFields = ["name", "slug", "description", "category", "price", "image", "images", "featured", "isActive", "availableBreeds", "sizeCharts", "sizeSpecs", "inventory"];
 
 function slugify(value) {
   return String(value).toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
@@ -50,6 +50,18 @@ function normalizeProductData(data) {
   if (data.sizeCharts) {
     for (const chart of data.sizeCharts) {
       if (!breeds.includes(chart.breed)) throw Object.assign(new Error("Size charts can only be created for available breeds"), { statusCode: 400 });
+    }
+  }
+  if (data.sizeSpecs !== undefined && !Array.isArray(data.sizeSpecs)) throw Object.assign(new Error("Size specifications must be an array"), { statusCode: 400 });
+  const knownSizes = new Set();
+  for (const spec of data.sizeSpecs || []) {
+    spec.size = String(spec.size || "").trim().toUpperCase();
+    if (!spec.size || knownSizes.has(spec.size)) throw Object.assign(new Error("Each product size specification needs a unique size"), { statusCode: 400 });
+    knownSizes.add(spec.size);
+    for (const [minKey, maxKey, label] of [["neckMinCm", "neckMaxCm", "neck"], ["chestMinCm", "chestMaxCm", "chest"], ["backMinCm", "backMaxCm", "back"]]) {
+      const min = Number(spec[minKey]); const max = Number(spec[maxKey]);
+      if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0 || min > max) throw Object.assign(new Error(`${spec.size} needs a valid ${label} minimum and maximum`), { statusCode: 400 });
+      spec[minKey] = min; spec[maxKey] = max;
     }
   }
 }

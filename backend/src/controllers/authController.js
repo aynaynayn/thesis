@@ -6,29 +6,47 @@ const passwordPattern =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 
 function publicUser(user) {
-  const petProfile = user.petProfile?.breed ? user.petProfile : null;
+  const legacyProfile = user.petProfile?.toObject?.() || user.petProfile;
+  const petProfiles = user.petProfiles?.length
+    ? user.petProfiles
+    : user.petProfile?.breed
+      ? [{ ...legacyProfile, _id: "legacy", name: "Your dog" }]
+      : [];
   return {
     id: user._id,
     name: user.name,
     email: user.email,
     phone: user.phone,
     role: user.role,
-    petProfile,
+    petProfiles: petProfiles.map((profile) => ({
+      id: String(profile._id),
+      name: profile.name,
+      breed: profile.breed,
+      neckGirthCm: profile.neckGirthCm ?? profile.neckCm,
+      chestGirthCm: profile.chestGirthCm ?? profile.chestCm,
+      backLengthCm: profile.backLengthCm ?? profile.backCm,
+    })),
   };
 }
 
 function petProfileFrom(body) {
-  const { breed, neckCm, chestCm, backCm } = body;
-  const values = { breed: String(breed || "").trim(), neckCm, chestCm, backCm };
-  const hasAnyValue = values.breed || [neckCm, chestCm, backCm].some((value) => value !== undefined && value !== "");
-  if (!hasAnyValue) return {};
+  const { name, breed, neckGirthCm, chestGirthCm, backLengthCm } = body;
+  const values = { name: String(name || "").trim(), breed: String(breed || "").trim(), neckGirthCm, chestGirthCm, backLengthCm };
+  if (!values.name) throw Object.assign(new Error("A pet name is required"), { statusCode: 400 });
   if (!values.breed) throw Object.assign(new Error("A dog breed is required"), { statusCode: 400 });
-  for (const [label, value] of [["neck", neckCm], ["chest", chestCm], ["back", backCm]]) {
+  for (const [label, value] of [["neck girth", neckGirthCm], ["chest girth", chestGirthCm], ["back length", backLengthCm]]) {
     if (!Number.isFinite(Number(value)) || Number(value) <= 0 || Number(value) > 300) {
       throw Object.assign(new Error(`${label} measurement must be between 0 and 300 cm`), { statusCode: 400 });
     }
   }
-  return { breed: values.breed, neckCm: Number(neckCm), chestCm: Number(chestCm), backCm: Number(backCm) };
+  return { name: values.name, breed: values.breed, neckGirthCm: Number(neckGirthCm), chestGirthCm: Number(chestGirthCm), backLengthCm: Number(backLengthCm) };
+}
+
+function upgradeLegacyProfile(user) {
+  if (!user.petProfiles?.length && user.petProfile?.breed) {
+    user.petProfiles = [{ name: "Your dog", breed: user.petProfile.breed, neckGirthCm: user.petProfile.neckGirthCm ?? user.petProfile.neckCm, chestGirthCm: user.petProfile.chestGirthCm ?? user.petProfile.chestCm, backLengthCm: user.petProfile.backLengthCm ?? user.petProfile.backCm }];
+    user.petProfile = {};
+  }
 }
 
 function createToken(user) {
@@ -210,10 +228,47 @@ export function getMe(req, res) {
 
 export async function updateProfile(req, res, next) {
   try {
-    req.user.petProfile = petProfileFrom(req.body);
+    upgradeLegacyProfile(req.user);
+    req.user.petProfiles = [petProfileFrom(req.body)];
+    req.user.petProfile = {};
     await req.user.save();
     res.json({ user: publicUser(req.user) });
   } catch (error) {
     next(error);
   }
+}
+
+export async function createPetProfile(req, res, next) {
+  try {
+    upgradeLegacyProfile(req.user);
+    if (req.user.petProfiles.length >= 12) return res.status(400).json({ message: "You can save up to 12 pet profiles" });
+    req.user.petProfiles.push(petProfileFrom(req.body));
+    req.user.petProfile = {};
+    await req.user.save();
+    res.status(201).json({ user: publicUser(req.user) });
+  } catch (error) { next(error); }
+}
+
+export async function updatePetProfile(req, res, next) {
+  try {
+    upgradeLegacyProfile(req.user);
+    const profile = req.params.id === "legacy" ? req.user.petProfiles[0] : req.user.petProfiles.id(req.params.id);
+    if (!profile) return res.status(404).json({ message: "Pet profile not found" });
+    Object.assign(profile, petProfileFrom(req.body));
+    req.user.petProfile = {};
+    await req.user.save();
+    res.json({ user: publicUser(req.user) });
+  } catch (error) { next(error); }
+}
+
+export async function deletePetProfile(req, res, next) {
+  try {
+    upgradeLegacyProfile(req.user);
+    const profile = req.params.id === "legacy" ? req.user.petProfiles[0] : req.user.petProfiles.id(req.params.id);
+    if (!profile) return res.status(404).json({ message: "Pet profile not found" });
+    profile.deleteOne();
+    req.user.petProfile = {};
+    await req.user.save();
+    res.json({ user: publicUser(req.user) });
+  } catch (error) { next(error); }
 }

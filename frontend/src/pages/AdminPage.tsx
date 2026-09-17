@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { LogOut, Package, Plus, Trash2, X } from "lucide-react";
+import { LogOut, Package, Plus, RefreshCw, Trash2, X } from "lucide-react";
 import {
   BREEDS,
   type Breed,
   type InventoryItem,
   type Product,
 } from "../data/products";
-import { productsApi } from "../lib/api";
-import AdminOrders from "../components/AdminOrders";
+import { ordersApi, productsApi, type Order } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "../context/RouterContext";
 
@@ -22,6 +21,7 @@ type Draft = Pick<
   | "featured"
   | "inventory"
   | "sizeCharts"
+  | "sizeSpecs"
 >;
 type QueuedModel = { id: string; breed: string; file: File | null };
 
@@ -35,6 +35,7 @@ const emptyDraft = (): Draft => ({
   featured: false,
   inventory: [],
   sizeCharts: [],
+  sizeSpecs: [],
 });
 const createQueueRow = (): QueuedModel => ({
   id: crypto.randomUUID(),
@@ -269,6 +270,12 @@ function ProductEditor({
         { breed: BREEDS[0], size: "", sku: "", stock: 0, lowStockThreshold: 3 },
       ],
     }));
+  const syncSizeSpecs = () => setDraft((current) => {
+    const existing = new Map(current.sizeSpecs.map((spec) => [spec.size, spec]));
+    const sizes = [...new Set(current.inventory.map((variant) => variant.size.trim().toUpperCase()).filter(Boolean))];
+    return { ...current, sizeSpecs: sizes.map((size) => existing.get(size) || { size, neckMinCm: 0, neckMaxCm: 0, chestMinCm: 0, chestMaxCm: 0, backMinCm: 0, backMaxCm: 0 }) };
+  });
+  const updateSizeSpec = (index: number, field: keyof Product["sizeSpecs"][number], value: number) => setDraft((current) => ({ ...current, sizeSpecs: current.sizeSpecs.map((spec, itemIndex) => itemIndex === index ? { ...spec, [field]: value } : spec) }));
 
   const validateImage = () => {
     if (!imageFile && !product?.image) return "Choose a product image.";
@@ -513,6 +520,10 @@ function ProductEditor({
               ))}
             </div>
           </section>
+          <section className="border-t border-border pt-5">
+            <div className="flex items-start justify-between gap-4"><div><h3 className="font-bold text-foreground">Product size specifications</h3><p className="mt-1 text-sm text-muted-foreground">Set the product garment ranges in cm. These values are product specifications, not breed standards.</p></div><button type="button" onClick={syncSizeSpecs} className="shrink-0 text-sm font-semibold text-primary">Sync sizes</button></div>
+            <SizeSpecEditor specs={draft.sizeSpecs} onChange={updateSizeSpec} />
+          </section>
           {!product || queuedModels.length ? (
             <QueuedModelsSection
               entries={queuedModels}
@@ -600,6 +611,12 @@ function ImagePicker({
       </div>
     </div>
   );
+}
+
+function SizeSpecEditor({ specs, onChange }: { specs: Product["sizeSpecs"]; onChange: (index: number, field: keyof Product["sizeSpecs"][number], value: number) => void }) {
+  if (!specs.length) return <p className="mt-4 text-sm text-muted-foreground">Add inventory sizes, then select Sync sizes to enter their garment specifications.</p>;
+  const fields = [["neckMinCm", "Neck min"], ["neckMaxCm", "Neck max"], ["chestMinCm", "Chest min"], ["chestMaxCm", "Chest max"], ["backMinCm", "Back min"], ["backMaxCm", "Back max"]] as const;
+  return <div className="mt-4 space-y-3">{specs.map((spec, index) => <div key={spec.size} className="grid grid-cols-2 gap-3 rounded-xl border border-border p-3 sm:grid-cols-4 lg:grid-cols-7"><p className="col-span-2 self-center font-bold sm:col-span-1">{spec.size}</p>{fields.map(([field, label]) => <Label key={field} text={label}><input required type="number" min="0" max="300" step="0.1" value={spec[field] || ""} onChange={(event) => onChange(index, field, Number(event.target.value))} className="input" /></Label>)}</div>)}</div>;
 }
 
 function InventoryRow({
@@ -1026,6 +1043,7 @@ function productDraft(product: Product): Draft {
     featured: product.featured,
     inventory: product.inventory,
     sizeCharts: product.sizeCharts,
+    sizeSpecs: product.sizeSpecs,
   };
 }
 function filenameFromPath(modelPath: string) {
@@ -1043,5 +1061,223 @@ function Label({
       {text}
       {children}
     </label>
+  );
+}
+
+type AdminOrder = Order & {
+  user?: { name: string; email: string };
+};
+
+const statuses: Order["status"][] = [
+  "pending",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
+
+const paymentStatuses: Order["paymentStatus"][] = [
+  "pending",
+  "paid",
+  "failed",
+  "refunded",
+];
+
+function AdminOrders() {
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [filter, setFilter] = useState<"all" | Order["status"]>("all");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const load = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setOrders((await ordersApi.admin()).orders as AdminOrder[]);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to load orders",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const update = async (
+    order: AdminOrder,
+    status: Order["status"],
+    paymentStatus: Order["paymentStatus"],
+  ) => {
+    setSaving(order.id);
+    setError("");
+    try {
+      const result = await ordersApi.updateStatus(
+        order.id,
+        status,
+        paymentStatus,
+      );
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id ? { ...item, ...result.order } : item,
+        ),
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to update order",
+      );
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const visibleOrders =
+    filter === "all"
+      ? orders
+      : orders.filter((order) => order.status === filter);
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10">
+      <div className="border-t border-border pt-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-extrabold text-foreground">
+              Order management
+            </h2>
+            <p className="mt-1 text-muted-foreground">
+              Review customer orders and keep fulfilment and payment status
+              current.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={filter}
+              onChange={(event) =>
+                setFilter(event.target.value as typeof filter)
+              }
+              className="input w-auto"
+            >
+              <option value="all">All orders</option>
+              {statuses.map((status) => (
+                <option key={status} value={status}>
+                  {status[0].toUpperCase() + status.slice(1)}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              aria-label="Refresh orders"
+              title="Refresh orders"
+              onClick={() => void load()}
+              className="rounded-full border border-border p-2.5 text-muted-foreground"
+            >
+              <RefreshCw size={16} />
+            </button>
+          </div>
+        </div>
+        {error && (
+          <p className="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {loading ? (
+          <p className="mt-8 text-muted-foreground">Loading orders</p>
+        ) : visibleOrders.length === 0 ? (
+          <div className="mt-8 rounded-2xl border border-border p-8 text-center text-muted-foreground">
+            No orders match this filter.
+          </div>
+        ) : (
+          <div className="mt-8 space-y-4">
+            {visibleOrders.map((order) => (
+              <article
+                key={order.id}
+                className="rounded-2xl border border-border bg-card p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-foreground">
+                      {order.orderNumber}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {order.user?.name || "Customer"} ·{" "}
+                      {order.user?.email || order.deliveryAddress.email}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(order.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <p className="text-lg font-extrabold text-foreground">
+                    ₱{order.total.toLocaleString()}
+                  </p>
+                </div>
+                <div className="mt-4 grid gap-2 text-sm text-muted-foreground">
+                  {order.items.map((item, index) => (
+                    <p key={`${order.id}-${index}`}>
+                      <span className="font-semibold text-foreground">
+                        {item.name}
+                      </span>{" "}
+                      · {item.breed} · {item.size} · Qty {item.quantity}
+                    </p>
+                  ))}
+                </div>
+                <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <label className="flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
+                    Order status
+                    <select
+                      disabled={saving === order.id}
+                      value={order.status}
+                      onChange={(event) =>
+                        void update(
+                          order,
+                          event.target.value as Order["status"],
+                          order.paymentStatus,
+                        )
+                      }
+                      className="input"
+                    >
+                      {statuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status[0].toUpperCase() + status.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
+                    Payment status
+                    <select
+                      disabled={saving === order.id}
+                      value={order.paymentStatus}
+                      onChange={(event) =>
+                        void update(
+                          order,
+                          order.status,
+                          event.target.value as Order["paymentStatus"],
+                        )
+                      }
+                      className="input"
+                    >
+                      {paymentStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status[0].toUpperCase() + status.slice(1)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
   );
 }

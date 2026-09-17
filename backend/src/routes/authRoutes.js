@@ -7,6 +7,9 @@ import {
   requestPasswordReset,
   resetPassword,
   updateProfile,
+  createPetProfile,
+  updatePetProfile,
+  deletePetProfile,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -19,5 +22,8 @@ router.post("/forgot-password", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 router.get("/me", protect, getMe);
 router.patch("/profile", protect, updateProfile);
+router.post("/pet-profiles", protect, createPetProfile);
+router.patch("/pet-profiles/:id", protect, updatePetProfile);
+router.delete("/pet-profiles/:id", protect, deletePetProfile);
 
 export default router;

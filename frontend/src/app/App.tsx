@@ -20,7 +20,7 @@ function PageRenderer() {
   if (page === "admin") return <AdminPage />;
 
   return (
-    <div className="min-h-screen flex flex-col bg-background font-[Nunito,DM_Sans,sans-serif]">
+    <div className="min-h-screen flex flex-col bg-background">
       <Navbar />
       <CartSidebar />
       <div className="flex-1">

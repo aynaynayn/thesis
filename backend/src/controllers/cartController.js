@@ -10,7 +10,7 @@ async function getCart(userId) {
 function publicCart(cart) {
   return {
     id: cart._id,
-    items: cart.items.filter((item) => item.product).map((item) => ({ id: item._id, product: item.product, breed: item.breed, size: item.size, quantity: item.quantity })),
+    items: cart.items.filter((item) => item.product).map((item) => ({ id: item._id, product: item.product, breed: item.breed, petBreed: item.petBreed, size: item.size, quantity: item.quantity })),
   };
 }
 
@@ -20,26 +20,26 @@ export async function getCurrentCart(req, res, next) {
 
 export async function addCartItem(req, res, next) {
   try {
-    const { productId, breed, size, quantity = 1 } = req.body;
-    if (!productId || !breed || !size || !Number.isInteger(quantity) || quantity < 1 || quantity > 20) return res.status(400).json({ message: "Product, breed, size, and a quantity from 1 to 20 are required" });
+    const { productId, size, petBreed, quantity = 1 } = req.body;
+    if (!productId || !size || !Number.isInteger(quantity) || quantity < 1 || quantity > 20) return res.status(400).json({ message: "Product, size, and a quantity from 1 to 20 are required" });
     const product = await Product.findOne({ _id: productId, isActive: true });
     const normalizedSize = size.trim().toUpperCase();
-    const variant = product?.inventory.find((item) => item.breed === breed.trim() && item.size === normalizedSize);
+    const variant = product?.inventory.find((item) => item.size === normalizedSize && item.stock >= quantity);
     if (!variant || variant.stock < quantity) return res.status(409).json({ message: "The selected product variant is unavailable" });
     const cart = await Cart.findOneAndUpdate(
-      { user: req.user._id, "items.product": productId, "items.breed": breed.trim(), "items.size": normalizedSize },
+      { user: req.user._id, "items.product": productId, "items.breed": variant.breed, "items.size": normalizedSize },
       { $inc: { "items.$.quantity": quantity } },
       { new: true },
     );
     const updated = cart || await Cart.findOneAndUpdate(
       { user: req.user._id },
-      { $push: { items: { product: productId, breed: breed.trim(), size: normalizedSize, quantity } } },
+      { $push: { items: { product: productId, breed: variant.breed, petBreed: String(petBreed || "").trim(), size: normalizedSize, quantity } } },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     );
     const current = await updated.populate("items.product");
-    const item = current.items.find((cartItem) => String(cartItem.product._id) === String(productId) && cartItem.breed === breed.trim() && cartItem.size === normalizedSize);
+    const item = current.items.find((cartItem) => String(cartItem.product._id) === String(productId) && cartItem.breed === variant.breed && cartItem.size === normalizedSize);
     if (!item || item.quantity > variant.stock) {
-      await Cart.updateOne({ _id: current._id }, { $set: { "items.$[item].quantity": variant.stock } }, { arrayFilters: [{ "item.product": product._id, "item.breed": breed.trim(), "item.size": normalizedSize }] });
+      await Cart.updateOne({ _id: current._id }, { $set: { "items.$[item].quantity": variant.stock } }, { arrayFilters: [{ "item.product": product._id, "item.breed": variant.breed, "item.size": normalizedSize }] });
       return res.status(409).json({ message: "Only the currently available quantity can be added" });
     }
     res.status(201).json({ cart: publicCart(current) });

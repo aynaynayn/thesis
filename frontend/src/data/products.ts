@@ -4,6 +4,7 @@ export type SizeChart = {
   breed: Breed;
   sizes: { label: string; neckCm: number; chestCm: number; backCm: number }[];
 };
+export type SizeSpec = { size: string; neckMinCm: number; neckMaxCm: number; chestMinCm: number; chestMaxCm: number; backMinCm: number; backMaxCm: number };
 
 export type InventoryItem = {
   _id?: string;
@@ -30,6 +31,7 @@ export type Product = {
   images: string[];
   availableBreeds: Breed[];
   sizeCharts: SizeChart[];
+  sizeSpecs: SizeSpec[];
   models: ProductModel[];
   inventory: InventoryItem[];
   stock: number;

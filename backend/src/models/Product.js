@@ -22,7 +22,23 @@ const sizeSchema = new mongoose.Schema(
 );
 
 const sizeChartSchema = new mongoose.Schema(
-  { breed: { type: String, required: true }, sizes: { type: [sizeSchema], default: [] } },
+  {
+    breed: { type: String, required: true },
+    sizes: { type: [sizeSchema], default: [] },
+  },
+  { _id: false },
+);
+
+const sizeSpecSchema = new mongoose.Schema(
+  {
+    size: { type: String, required: true, trim: true, uppercase: true },
+    neckMinCm: { type: Number, required: true, min: 0 },
+    neckMaxCm: { type: Number, required: true, min: 0 },
+    chestMinCm: { type: Number, required: true, min: 0 },
+    chestMaxCm: { type: Number, required: true, min: 0 },
+    backMinCm: { type: Number, required: true, min: 0 },
+    backMaxCm: { type: Number, required: true, min: 0 },
+  },
   { _id: false },
 );
 
@@ -37,9 +53,21 @@ const modelSchema = new mongoose.Schema(
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 160 },
-    slug: { type: String, required: true, unique: true, trim: true, lowercase: true },
+    slug: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
     description: { type: String, required: true, trim: true, maxlength: 4000 },
-    category: { type: String, required: true, trim: true, maxlength: 80, index: true },
+    category: {
+      type: String,
+      required: true,
+      trim: true,
+      maxlength: 80,
+      index: true,
+    },
     price: { type: Number, required: true, min: 0 },
     image: { type: String, trim: true },
     images: { type: [String], default: [] },
@@ -47,6 +75,7 @@ const productSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true, index: true },
     availableBreeds: { type: [String], default: [] },
     sizeCharts: { type: [sizeChartSchema], default: [] },
+    sizeSpecs: { type: [sizeSpecSchema], default: [] },
     models: {
       type: [modelSchema],
       default: [],

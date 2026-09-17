@@ -1,8 +1,26 @@
-import { ShoppingBag } from "lucide-react";
 import type { Product } from "../data/products";
 import { useRouter } from "../context/RouterContext";
 
 export default function ProductCard({ product }: { product: Product }) {
   const { navigate } = useRouter();
-  return <button onClick={() => navigate("product", product.slug)} className="group text-left bg-card rounded-2xl overflow-hidden border border-border hover:shadow-lg transition-shadow"><div className="relative aspect-square overflow-hidden bg-muted"><img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />{product.stock <= 10 && <span className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-background/90 text-xs font-semibold text-foreground">{product.stock ? "Low stock" : "Out of stock"}</span>}</div><div className="p-4"><p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{product.category}</p><h3 className="font-bold text-foreground mt-0.5 text-base">{product.name}</h3><div className="flex items-center gap-1.5 mt-1.5 flex-wrap">{product.availableBreeds.map((breed) => <span key={breed} className="px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">{breed}</span>)}</div><div className="flex items-center justify-between mt-3"><span className="font-bold text-lg text-foreground">₱{product.price.toLocaleString()}</span><span className="flex items-center gap-1 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold"><ShoppingBag size={13} /> View</span></div></div></button>;
+
+  return (
+    <button
+      onClick={() => navigate("product", product.slug)}
+      className="product-surface group w-full overflow-hidden rounded-2xl border border-border bg-card text-left transition duration-300 hover:-translate-y-1"
+    >
+      <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+        <img src={product.image} alt={product.name} className="h-full w-full object-cover grayscale-[20%] transition duration-500 group-hover:scale-[1.02] group-hover:grayscale-0" />
+        {product.stock <= 10 && <span className="absolute left-0 top-0 bg-background px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-foreground">{product.stock ? "Low stock" : "Out of stock"}</span>}
+      </div>
+      <div className="px-4 py-4">
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{product.category}</p>
+        <h3 className="mt-1 text-2xl text-foreground">{product.name}</h3>
+        <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+          <span className="font-mono text-sm text-foreground">₱{product.price.toLocaleString()}</span>
+          <span className="text-xs font-bold uppercase tracking-[0.1em] text-primary">View item</span>
+        </div>
+      </div>
+    </button>
+  );
 }

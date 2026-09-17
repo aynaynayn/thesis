@@ -18,12 +18,16 @@ const addressSchema = new mongoose.Schema(
 
 const petProfileSchema = new mongoose.Schema(
   {
+    name: { type: String, trim: true, maxlength: 80 },
     breed: { type: String, trim: true, maxlength: 80 },
     neckCm: { type: Number, min: 0, max: 300 },
     chestCm: { type: Number, min: 0, max: 300 },
     backCm: { type: Number, min: 0, max: 300 },
+    neckGirthCm: { type: Number, min: 0, max: 300 },
+    chestGirthCm: { type: Number, min: 0, max: 300 },
+    backLengthCm: { type: Number, min: 0, max: 300 },
   },
-  { _id: false },
+  { _id: true },
 );
 
 const userSchema = new mongoose.Schema(
@@ -43,6 +47,9 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true, maxlength: 30 },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     addresses: [addressSchema],
+    petProfiles: { type: [petProfileSchema], default: [] },
+    // Retained for existing accounts. It is folded into petProfiles when the
+    // account is returned or a profile is next written.
     petProfile: { type: petProfileSchema, default: () => ({}) },
   },
   { timestamps: true },

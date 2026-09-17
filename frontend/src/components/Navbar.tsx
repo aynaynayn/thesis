@@ -1,4 +1,3 @@
-import { ShoppingBag, User, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
@@ -10,92 +9,91 @@ export default function Navbar() {
   const { navigate, page } = useRouter();
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
-
   const navLinks = [
     { label: "Home", page: "home" as const },
     { label: "Shop", page: "shop" as const },
   ];
-
+  const accountPage = user
+    ? user.role === "admin"
+      ? "admin"
+      : "account"
+    : "auth";
   return (
-    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <button
-          onClick={() => navigate("home")}
-          className="flex items-center gap-2 shrink-0"
-        >
-          <img
-            src={pawfitLogo}
-            alt="PawFit"
-            className="h-20 w-auto"
-          />
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
+      <div className="mx-auto flex h-20 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <button onClick={() => navigate("home")} className="shrink-0">
+          <img src={pawfitLogo} alt="PawFit" className="h-25 w-auto" />
         </button>
-
-        <nav className="hidden sm:flex items-center gap-6">
+        <nav className="hidden items-center gap-7 sm:flex">
           {navLinks.map((link) => (
             <button
               key={link.page}
               onClick={() => navigate(link.page)}
-              className={`text-sm font-semibold transition-colors ${
-                page === link.page
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`border-b pb-0.5 test-base font-bold uppercase tracking-[0.14em] ${page === link.page ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
               {link.label}
             </button>
           ))}
         </nav>
-
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => user ? navigate(user.role === "admin" ? "admin" : "account") : navigate("auth")}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            onClick={() => navigate(accountPage)}
+            className="hidden test-base font-bold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground sm:block"
           >
-            <User size={16} />
-            <span>{user ? user.name : "Sign In"}</span>
+            {user ? user.name : "Sign in"}
           </button>
-
           <button
             onClick={openCart}
-            className="relative flex items-center justify-center w-10 h-10 rounded-full bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+            className=" border-foreground test-base font-bold uppercase tracking-[0.12em] text-muted-foreground"
           >
-            <ShoppingBag size={18} />
-            {count > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-foreground text-background text-xs font-bold flex items-center justify-center">
-                {count}
-              </span>
-            )}
+            Cart {count ? `(${count})` : ""}
           </button>
-
           <button
-            className="sm:hidden flex items-center justify-center w-10 h-10 rounded-full hover:bg-muted transition-colors"
             onClick={() => setMenuOpen(!menuOpen)}
+            className="border-b border-foreground pb-0.5 test-base font-bold uppercase tracking-[0.12em] sm:hidden"
           >
-            {menuOpen ? <X size={20} /> : <Menu size={20} />}
+            {menuOpen ? "Close" : "Menu"}
           </button>
         </div>
       </div>
-
       {menuOpen && (
-        <div className="sm:hidden border-t border-border bg-background px-4 py-4 flex flex-col gap-3">
-          {navLinks.map((link) => (
+        <div className="border-t border-border bg-background px-4 py-5 sm:hidden">
+          <nav className="flex flex-col gap-4">
+            {navLinks.map((link) => (
+              <button
+                key={link.page}
+                onClick={() => {
+                  navigate(link.page);
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-bold uppercase tracking-[0.12em]"
+              >
+                {link.label}
+              </button>
+            ))}
             <button
-              key={link.page}
-              onClick={() => { navigate(link.page); setMenuOpen(false); }}
-              className={`text-left text-base font-semibold py-1 transition-colors ${
-                page === link.page ? "text-primary" : "text-foreground"
-              }`}
+              onClick={() => {
+                navigate(accountPage);
+                setMenuOpen(false);
+              }}
+              className="text-left text-sm font-bold uppercase tracking-[0.12em]"
             >
-              {link.label}
+              {user ? user.name : "Sign in"}
             </button>
-          ))}
-          <button
-            onClick={() => { navigate(user ? (user.role === "admin" ? "admin" : "account") : "auth"); setMenuOpen(false); }}
-            className="text-left text-base font-semibold py-1 text-muted-foreground"
-          >
-            {user ? user.name : "Sign In"}
-          </button>
-          {user && <button onClick={() => { void logout().finally(() => { navigate("home"); setMenuOpen(false); }); }} className="text-left text-sm text-muted-foreground">Sign Out</button>}
+            {user && (
+              <button
+                onClick={() => {
+                  void logout().finally(() => {
+                    navigate("home");
+                    setMenuOpen(false);
+                  });
+                }}
+                className="text-left text-sm text-muted-foreground"
+              >
+                Sign out
+              </button>
+            )}
+          </nav>
         </div>
       )}
     </header>

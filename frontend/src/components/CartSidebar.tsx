@@ -1,4 +1,3 @@
-import { X, Trash2, ShoppingBag, Plus, Minus } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
 
@@ -16,32 +15,28 @@ export default function CartSidebar() {
       )}
 
       <aside
-        className={`fixed top-0 right-0 h-full w-full max-w-sm z-50 bg-card shadow-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`fixed top-0 right-0 h-full w-full max-w-sm z-50 border-l border-border bg-card flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <ShoppingBag size={20} className="text-primary" />
-            <h2 className="font-bold text-lg text-foreground">Your Cart</h2>
-          </div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Bag / {items.length} items</p>
           <button
             onClick={closeCart}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
+            className="border-b border-foreground pb-0.5 text-xs font-bold uppercase tracking-[0.12em] hover:text-primary"
+            aria-label="Close bag"
           >
-            <X size={18} />
+            Close
           </button>
         </div>
 
         {items.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-4 text-center px-6">
-            <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center">
-              <ShoppingBag size={32} className="text-muted-foreground" />
-            </div>
-            <p className="text-muted-foreground font-medium">Your cart is empty</p>
+          <div className="flex-1 flex flex-col items-start justify-center gap-4 px-6">
+            <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Nothing selected</p>
+            <p className="font-serif text-4xl leading-none text-foreground">Your bag is empty.</p>
             <button
               onClick={() => { navigate("shop"); closeCart(); }}
-              className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+              className="border-b border-primary pb-1 text-xs font-bold uppercase tracking-[0.12em] text-primary"
             >
               Browse Products
             </button>
@@ -54,7 +49,7 @@ export default function CartSidebar() {
                   key={item.id}
                   className="flex gap-3"
                 >
-                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-muted shrink-0">
+                  <div className="w-20 h-20 overflow-hidden bg-muted shrink-0">
                     <img
                       src={item.product.image}
                       alt={item.product.name}
@@ -74,26 +69,28 @@ export default function CartSidebar() {
                     <div className="flex items-center gap-2 mt-2">
                       <button
                         onClick={() => void updateQuantity(item.id, item.quantity - 1)}
-                        className="w-6 h-6 rounded-full bg-muted flex items-center justify-center hover:bg-border transition-colors"
+                        className="h-7 w-7 border border-border text-sm hover:bg-muted"
+                        aria-label={`Decrease ${item.product.name} quantity`}
                       >
-                        <Minus size={12} />
+                        −
                       </button>
                       <span className="text-sm font-semibold w-5 text-center">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => void updateQuantity(item.id, item.quantity + 1)}
-                        className="w-6 h-6 rounded-full bg-muted flex items-center justify-center hover:bg-border transition-colors"
+                        className="h-7 w-7 border border-border text-sm hover:bg-muted"
+                        aria-label={`Increase ${item.product.name} quantity`}
                       >
-                        <Plus size={12} />
+                        +
                       </button>
                     </div>
                   </div>
                   <button
                     onClick={() => void removeItem(item.id)}
-                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-destructive"
+                    className="shrink-0 border-b border-transparent pb-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground hover:border-destructive hover:text-destructive"
                   >
-                    <Trash2 size={14} />
+                    Remove
                   </button>
                 </div>
               ))}
@@ -111,13 +108,13 @@ export default function CartSidebar() {
               </p>
               <button
                 onClick={() => { navigate("checkout"); closeCart(); }}
-                className="w-full py-3 rounded-full bg-primary text-primary-foreground font-bold text-sm hover:opacity-90 transition-opacity"
+                className="w-full border border-primary bg-primary py-3 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground"
               >
                 Proceed to Checkout
               </button>
               <button
                 onClick={() => { navigate("shop"); closeCart(); }}
-                className="w-full py-2.5 rounded-full border border-border text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+                className="w-full border border-border py-3 text-xs font-bold uppercase tracking-[0.12em] text-foreground hover:bg-muted"
               >
                 Continue Shopping
               </button>

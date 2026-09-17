@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { Search, X } from "lucide-react";
 import { BREEDS, type Product } from "../data/products";
 import { productsApi } from "../lib/api";
 import ProductCard from "../components/ProductCard";
@@ -37,21 +36,19 @@ export default function ShopPage() {
     setCategory("All");
   };
   return (
-    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-      <h1 className="text-3xl font-extrabold text-foreground">Shop</h1>
+    <main className="max-w-6xl mx-auto px-4 sm:px-6 py-12">
+      <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">The PawFit catalogue</p>
+      <h1 className="mt-2 text-5xl text-foreground">Shop</h1>
       <p className="text-muted-foreground mt-1">
         {filtered.length} product{filtered.length === 1 ? "" : "s"} available
       </p>
       <div className="mt-7 flex flex-col gap-4">
-        <div className="relative">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
+        <div className="border-b border-border">
           <input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-full border border-border bg-card text-sm"
+            placeholder="Search the collection"
+            className="w-full bg-transparent py-3 text-sm outline-none"
             aria-label="Search products"
           />
         </div>
@@ -70,9 +67,9 @@ export default function ShopPage() {
         {(search || breed !== "All" || category !== "All") && (
           <button
             onClick={clear}
-            className="self-start flex items-center gap-1 text-sm font-semibold text-muted-foreground"
+            className="self-start border-b border-muted-foreground pb-0.5 text-xs font-bold uppercase tracking-[0.1em] text-muted-foreground"
           >
-            <X size={14} /> Clear filters
+            Clear filters
           </button>
         )}
       </div>
@@ -81,7 +78,7 @@ export default function ShopPage() {
       ) : loading ? (
         <p className="mt-10 text-muted-foreground">Loading products</p>
       ) : filtered.length ? (
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="mt-10 grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -116,7 +113,7 @@ function Filter({
           <button
             key={value}
             onClick={() => onChange(value)}
-            className={`px-3 py-1.5 rounded-full text-sm font-semibold ${selected === value ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
+            className={`border-b px-1 py-1 text-xs font-bold uppercase tracking-[0.08em] ${selected === value ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:border-border"}`}
           >
             {value}
           </button>
