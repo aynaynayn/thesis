@@ -18,6 +18,7 @@ export type InventoryItem = {
 export type ProductModel = {
   breed: string;
   modelPath: string;
+  cloudinaryPublicId?: string;
 };
 
 export type Product = {
@@ -28,6 +29,7 @@ export type Product = {
   price: number;
   description: string;
   image: string;
+  imageCloudinaryPublicId?: string;
   images: string[];
   availableBreeds: Breed[];
   sizeCharts: SizeChart[];

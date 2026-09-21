@@ -270,12 +270,45 @@ function ProductEditor({
         { breed: BREEDS[0], size: "", sku: "", stock: 0, lowStockThreshold: 3 },
       ],
     }));
-  const syncSizeSpecs = () => setDraft((current) => {
-    const existing = new Map(current.sizeSpecs.map((spec) => [spec.size, spec]));
-    const sizes = [...new Set(current.inventory.map((variant) => variant.size.trim().toUpperCase()).filter(Boolean))];
-    return { ...current, sizeSpecs: sizes.map((size) => existing.get(size) || { size, neckMinCm: 0, neckMaxCm: 0, chestMinCm: 0, chestMaxCm: 0, backMinCm: 0, backMaxCm: 0 }) };
-  });
-  const updateSizeSpec = (index: number, field: keyof Product["sizeSpecs"][number], value: number) => setDraft((current) => ({ ...current, sizeSpecs: current.sizeSpecs.map((spec, itemIndex) => itemIndex === index ? { ...spec, [field]: value } : spec) }));
+  const syncSizeSpecs = () =>
+    setDraft((current) => {
+      const existing = new Map(
+        current.sizeSpecs.map((spec) => [spec.size, spec]),
+      );
+      const sizes = [
+        ...new Set(
+          current.inventory
+            .map((variant) => variant.size.trim().toUpperCase())
+            .filter(Boolean),
+        ),
+      ];
+      return {
+        ...current,
+        sizeSpecs: sizes.map(
+          (size) =>
+            existing.get(size) || {
+              size,
+              neckMinCm: 0,
+              neckMaxCm: 0,
+              chestMinCm: 0,
+              chestMaxCm: 0,
+              backMinCm: 0,
+              backMaxCm: 0,
+            },
+        ),
+      };
+    });
+  const updateSizeSpec = (
+    index: number,
+    field: keyof Product["sizeSpecs"][number],
+    value: number,
+  ) =>
+    setDraft((current) => ({
+      ...current,
+      sizeSpecs: current.sizeSpecs.map((spec, itemIndex) =>
+        itemIndex === index ? { ...spec, [field]: value } : spec,
+      ),
+    }));
 
   const validateImage = () => {
     if (!imageFile && !product?.image) return "Choose a product image.";
@@ -344,11 +377,14 @@ function ProductEditor({
         saved = await productsApi.update(product.id, draft);
       } else {
         setProgress("Uploading product image...");
-        const { imagePath } = await productsApi.uploadPendingImage(
-          imageFile as File,
-        );
+        const { imagePath, imageCloudinaryPublicId } =
+          await productsApi.uploadPendingImage(imageFile as File);
         setProgress("Creating product...");
-        saved = await productsApi.create({ ...draft, image: imagePath });
+        saved = await productsApi.create({
+          ...draft,
+          image: imagePath,
+          imageCloudinaryPublicId,
+        });
         setImageFile(null);
       }
       setProduct(saved);
@@ -521,7 +557,24 @@ function ProductEditor({
             </div>
           </section>
           <section className="border-t border-border pt-5">
-            <div className="flex items-start justify-between gap-4"><div><h3 className="font-bold text-foreground">Product size specifications</h3><p className="mt-1 text-sm text-muted-foreground">Set the product garment ranges in cm. These values are product specifications, not breed standards.</p></div><button type="button" onClick={syncSizeSpecs} className="shrink-0 text-sm font-semibold text-primary">Sync sizes</button></div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-bold text-foreground">
+                  Product size specifications
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Set the product garment ranges in cm. These values are product
+                  specifications, not breed standards.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={syncSizeSpecs}
+                className="shrink-0 text-sm font-semibold text-primary"
+              >
+                Sync sizes
+              </button>
+            </div>
             <SizeSpecEditor specs={draft.sizeSpecs} onChange={updateSizeSpec} />
           </section>
           {!product || queuedModels.length ? (
@@ -613,10 +666,62 @@ function ImagePicker({
   );
 }
 
-function SizeSpecEditor({ specs, onChange }: { specs: Product["sizeSpecs"]; onChange: (index: number, field: keyof Product["sizeSpecs"][number], value: number) => void }) {
-  if (!specs.length) return <p className="mt-4 text-sm text-muted-foreground">Add inventory sizes, then select Sync sizes to enter their garment specifications.</p>;
-  const fields = [["neckMinCm", "Neck min"], ["neckMaxCm", "Neck max"], ["chestMinCm", "Chest min"], ["chestMaxCm", "Chest max"], ["backMinCm", "Back min"], ["backMaxCm", "Back max"]] as const;
-  return <div className="mt-4 space-y-3">{specs.map((spec, index) => <div key={spec.size} className="grid grid-cols-2 gap-3 rounded-xl border border-border p-3 sm:grid-cols-4 lg:grid-cols-7"><p className="col-span-2 self-center font-bold sm:col-span-1">{spec.size}</p>{fields.map(([field, label]) => <Label key={field} text={label}><input required type="number" min="0" max="300" step="0.1" value={spec[field] || ""} onChange={(event) => onChange(index, field, Number(event.target.value))} className="input" /></Label>)}</div>)}</div>;
+function SizeSpecEditor({
+  specs,
+  onChange,
+}: {
+  specs: Product["sizeSpecs"];
+  onChange: (
+    index: number,
+    field: keyof Product["sizeSpecs"][number],
+    value: number,
+  ) => void;
+}) {
+  if (!specs.length)
+    return (
+      <p className="mt-4 text-sm text-muted-foreground">
+        Add inventory sizes, then select Sync sizes to enter their garment
+        specifications.
+      </p>
+    );
+  const fields = [
+    ["neckMinCm", "Neck min"],
+    ["neckMaxCm", "Neck max"],
+    ["chestMinCm", "Chest min"],
+    ["chestMaxCm", "Chest max"],
+    ["backMinCm", "Back min"],
+    ["backMaxCm", "Back max"],
+  ] as const;
+  return (
+    <div className="mt-4 space-y-3">
+      {specs.map((spec, index) => (
+        <div
+          key={spec.size}
+          className="grid grid-cols-2 gap-3 rounded-xl border border-border p-3 sm:grid-cols-4 lg:grid-cols-7"
+        >
+          <p className="col-span-2 self-center font-bold sm:col-span-1">
+            {spec.size}
+          </p>
+          {fields.map(([field, label]) => (
+            <Label key={field} text={label}>
+              <input
+                required
+                type="number"
+                min="0"
+                max="300"
+                step="0.1"
+                value={spec[field] || ""}
+                onChange={(event) =>
+                  onChange(index, field, Number(event.target.value))
+                }
+                className="input"
+              />
+            </Label>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 function InventoryRow({

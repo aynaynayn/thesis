@@ -97,7 +97,7 @@ export const productsApi = {
   async uploadPendingImage(file: File) {
     const formData = new FormData();
     formData.append("image", file);
-    return request<{ imagePath: string }>("/products/image-upload", { method: "POST", body: formData });
+    return request<{ imagePath: string; imageCloudinaryPublicId: string }>("/products/image-upload", { method: "POST", body: formData });
   },
   remove: (id: string) => request<void>(`/products/${id}`, { method: "DELETE" }),
 };

@@ -1,7 +1,7 @@
+import "dotenv/config";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
-import dotenv from "dotenv";
 import helmet from "helmet";
 import { rateLimit } from "express-rate-limit";
 import path from "path";
@@ -12,21 +12,12 @@ import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
-dotenv.config();
-
 const app = express();
 const port = process.env.PORT || 5000;
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://pawfit-shop.vercel.app",
-  ...(process.env.CLIENT_URL || "")
-    .split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean),
-];
-
-console.log("Allowed CORS origins:", allowedOrigins);
-
+const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const backendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",

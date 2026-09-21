@@ -46,6 +46,7 @@ const modelSchema = new mongoose.Schema(
   {
     breed: { type: String, required: true, trim: true },
     modelPath: { type: String, required: true, trim: true },
+    cloudinaryPublicId: { type: String, trim: true },
   },
   { _id: false },
 );
@@ -70,6 +71,7 @@ const productSchema = new mongoose.Schema(
     },
     price: { type: Number, required: true, min: 0 },
     image: { type: String, trim: true },
+    imageCloudinaryPublicId: { type: String, trim: true },
     images: { type: [String], default: [] },
     featured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true, index: true },
