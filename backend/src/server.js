@@ -14,10 +14,16 @@ import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 const app = express();
 const port = process.env.PORT || 5000;
-const allowedOrigins = (process.env.CLIENT_URL || "http://localhost:5173")
-  .split(",")
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://pawfit-shop.vercel.app",
+  ...(process.env.CLIENT_URL || "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean),
+];
+
+console.log("Allowed CORS origins:", allowedOrigins);
 const backendRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -29,8 +35,10 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin))
+      if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
+      }
+
       return callback(new Error("Origin is not allowed by CORS"));
     },
     credentials: true,
