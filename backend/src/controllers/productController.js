@@ -245,16 +245,29 @@ export async function uploadPendingImage(req, res, next) {
       });
     }
 
+    console.log("IMAGE UPLOAD START", {
+      name: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      hasBuffer: Boolean(req.file.buffer),
+    });
+
     const asset = await uploadImageBuffer(
       req.file.buffer,
       "pawfit/products/pending",
     );
+
+    console.log("CLOUDINARY UPLOAD SUCCESS", {
+      publicId: asset.public_id,
+      url: asset.secure_url,
+    });
 
     res.status(201).json({
       imagePath: asset.secure_url,
       imageCloudinaryPublicId: asset.public_id,
     });
   } catch (error) {
+    console.error("CLOUDINARY IMAGE UPLOAD FAILED:", error);
     next(error);
   }
 }
