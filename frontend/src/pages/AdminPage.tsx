@@ -424,7 +424,7 @@ function ProductEditor({
     <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto p-4">
       <form
         onSubmit={save}
-        className="my-6 mx-auto max-w-3xl bg-card rounded-3xl border border-border"
+        className="admin-editor my-6 mx-auto max-w-3xl bg-card rounded-3xl border border-border"
       >
         <div className="flex items-center justify-between p-5 border-b border-border">
           <h2 className="font-extrabold text-foreground">
@@ -434,7 +434,7 @@ function ProductEditor({
             <X size={18} />
           </button>
         </div>
-        <div className="p-5 grid gap-5">
+        <div className="p-4 grid gap-4">
           {error && (
             <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
               {error}
@@ -1220,10 +1220,12 @@ function AdminOrders() {
     }
   };
 
-  const visibleOrders =
-    filter === "all"
-      ? orders
-      : orders.filter((order) => order.status === filter);
+  const orderGroups = (filter === "all" ? statuses : [filter])
+    .map((status) => ({
+      status,
+      orders: orders.filter((order) => order.status === status),
+    }))
+    .filter((group) => group.orders.length);
 
   return (
     <section className="max-w-6xl mx-auto px-4 sm:px-6 pb-10">
@@ -1264,6 +1266,22 @@ function AdminOrders() {
             </button>
           </div>
         </div>
+        <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {statuses.map((status) => {
+            const count = orders.filter((order) => order.status === status).length;
+            return (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setFilter(status)}
+                className={`border px-3 py-2 text-left text-xs font-semibold ${filter === status ? "border-primary bg-secondary text-primary" : "border-border text-muted-foreground"}`}
+              >
+                <span className="block text-lg font-bold text-foreground">{count}</span>
+                {status[0].toUpperCase() + status.slice(1)}
+              </button>
+            );
+          })}
+        </div>
         {error && (
           <p className="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
             {error}
@@ -1271,13 +1289,20 @@ function AdminOrders() {
         )}
         {loading ? (
           <p className="mt-8 text-muted-foreground">Loading orders</p>
-        ) : visibleOrders.length === 0 ? (
+        ) : orderGroups.length === 0 ? (
           <div className="mt-8 rounded-2xl border border-border p-8 text-center text-muted-foreground">
             No orders match this filter.
           </div>
         ) : (
-          <div className="mt-8 space-y-4">
-            {visibleOrders.map((order) => (
+          <div className="mt-8 space-y-8">
+            {orderGroups.map((group) => (
+              <section key={group.status}>
+                <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
+                  <h3 className="font-bold text-foreground">{group.status[0].toUpperCase() + group.status.slice(1)} orders</h3>
+                  <span className="text-xs font-semibold text-muted-foreground">{group.orders.length}</span>
+                </div>
+                <div className="space-y-4">
+                {group.orders.map((order) => (
               <article
                 key={order.id}
                 className="rounded-2xl border border-border bg-card p-5"
@@ -1354,6 +1379,9 @@ function AdminOrders() {
                   </label>
                 </div>
               </article>
+                ))}
+                </div>
+              </section>
             ))}
           </div>
         )}

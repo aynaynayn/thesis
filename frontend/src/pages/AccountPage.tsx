@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "../context/RouterContext";
-import { authApi, type PetProfile, type PetProfileInput } from "../lib/api";
+import { authApi, ordersApi, type Order, type PetProfile, type PetProfileInput } from "../lib/api";
 
 const emptyProfile: PetProfileInput = {
   name: "",
@@ -126,6 +126,7 @@ export default function AccountPage() {
           Sign out
         </button>
       </section>
+      <MyOrders />
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr_.9fr]">
         <div className="rounded-2xl border border-border bg-card p-6">
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
@@ -258,6 +259,58 @@ export default function AccountPage() {
       </section>
     </main>
   );
+}
+
+function MyOrders() {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    void ordersApi
+      .mine()
+      .then((result) => setOrders(result.orders))
+      .catch((requestError: Error) => setError(requestError.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <section className="mt-6 rounded-2xl border border-border bg-card p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Purchases</p>
+          <h2 className="mt-2 text-3xl text-foreground">My orders</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">{orders.length} total</p>
+      </div>
+      {error ? <p className="mt-5 text-sm text-destructive">{error}</p> : loading ? <p className="mt-5 text-sm text-muted-foreground">Loading orders</p> : orders.length ? (
+        <div className="mt-5 divide-y divide-border border-y border-border">
+          {orders.map((order) => (
+            <article key={order.id} className="py-4 first:pt-0 last:pb-0">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="font-bold text-foreground">{order.orderNumber}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleString()}</p>
+                </div>
+                <p className="font-bold text-foreground">₱{order.total.toLocaleString()}</p>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
+                <span className="rounded-full bg-secondary px-3 py-1 text-primary">Order: {formatStatus(order.status)}</span>
+                <span className="rounded-full border border-border px-3 py-1 text-muted-foreground">Payment: {formatStatus(order.paymentStatus)}</span>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">
+                {order.items.map((item) => `${item.name} · ${item.size} × ${item.quantity}`).join("; ")}
+              </p>
+            </article>
+          ))}
+        </div>
+      ) : <p className="mt-5 text-sm text-muted-foreground">Your completed purchases will appear here.</p>}
+    </section>
+  );
+}
+
+function formatStatus(status: string) {
+  return status[0].toUpperCase() + status.slice(1);
 }
 
 function PetField({
