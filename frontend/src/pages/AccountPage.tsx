@@ -279,14 +279,14 @@ function MyOrders() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Purchases</p>
-          <h2 className="mt-2 text-3xl text-foreground">My orders</h2>
+          <h2 className="mt-2 text-3xl tracking-normal text-foreground">My orders</h2>
         </div>
         <p className="text-sm text-muted-foreground">{orders.length} total</p>
       </div>
       {error ? <p className="mt-5 text-sm text-destructive">{error}</p> : loading ? <p className="mt-5 text-sm text-muted-foreground">Loading orders</p> : orders.length ? (
-        <div className="mt-5 divide-y divide-border border-y border-border">
+        <div className="mt-5">
           {orders.map((order) => (
-            <article key={order.id} className="py-4 first:pt-0 last:pb-0">
+            <article key={order.id} className="border-t border-border py-4 first:pt-4 last:border-b">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="font-bold text-foreground">{order.orderNumber}</p>
