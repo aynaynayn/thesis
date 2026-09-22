@@ -23,6 +23,23 @@ function serialiseOrder(order) {
   return { ...order.toObject(), id: order._id };
 }
 
+function reserveSizeStock(product, size, quantity) {
+  const matching = product.inventory.filter((item) => item.size === size);
+  const available = matching.reduce((total, item) => total + item.stock, 0);
+  if (available < quantity) return null;
+  let remaining = quantity;
+  const allocations = [];
+  for (const item of matching) {
+    const allocated = Math.min(item.stock, remaining);
+    if (!allocated) continue;
+    item.stock -= allocated;
+    allocations.push({ sku: item.sku, quantity: allocated });
+    remaining -= allocated;
+    if (!remaining) break;
+  }
+  return allocations;
+}
+
 export async function createOrder(req, res, next) {
   const session = await mongoose.startSession();
   try {
@@ -36,16 +53,14 @@ export async function createOrder(req, res, next) {
       if (!cart?.items.length) throw Object.assign(new Error("Your cart is empty"), { statusCode: 400 });
       const items = [];
       for (const cartItem of cart.items) {
-        const product = cartItem.product;
+        const populatedProduct = cartItem.product;
+        const product = populatedProduct && await Product.findById(populatedProduct._id).session(session);
         if (!product) throw Object.assign(new Error("A product in your cart is no longer available"), { statusCode: 409 });
-        const updated = await Product.findOneAndUpdate(
-          { _id: product._id, isActive: true, inventory: { $elemMatch: { breed: cartItem.breed, size: cartItem.size, stock: { $gte: cartItem.quantity } } } },
-          { $inc: { "inventory.$.stock": -cartItem.quantity } },
-          { new: true, session },
-        );
-        if (!updated) throw Object.assign(new Error(`${product.name} no longer has enough stock`), { statusCode: 409 });
-        const variant = product.inventory.find((entry) => entry.breed === cartItem.breed && entry.size === cartItem.size);
-        items.push({ product: product._id, name: product.name, image: product.image, breed: cartItem.breed, size: cartItem.size, sku: variant.sku, quantity: cartItem.quantity, unitPrice: product.price });
+        if (!product.isActive) throw Object.assign(new Error(`${product.name} is no longer available`), { statusCode: 409 });
+        const allocations = reserveSizeStock(product, cartItem.size, cartItem.quantity);
+        if (!allocations) throw Object.assign(new Error(`${product.name} no longer has enough stock`), { statusCode: 409 });
+        await product.save({ session });
+        items.push({ product: product._id, name: product.name, image: product.image, breed: cartItem.petBreed, size: cartItem.size, sku: allocations[0].sku, inventoryAllocations: allocations, quantity: cartItem.quantity, unitPrice: product.price });
       }
       const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       [createdOrder] = await Order.create([{
@@ -76,7 +91,17 @@ export async function getMyOrder(req, res, next) {
 async function restoreInventory(order, session) {
   if (order.inventoryRestored) return;
   for (const item of order.items) {
-    await Product.updateOne({ _id: item.product, inventory: { $elemMatch: { breed: item.breed, size: item.size } } }, { $inc: { "inventory.$.stock": item.quantity } }, { session });
+    const product = await Product.findById(item.product).session(session);
+    if (!product) continue;
+    const allocations = item.inventoryAllocations?.length
+      ? item.inventoryAllocations
+      : [{ sku: item.sku, quantity: item.quantity }];
+    for (const allocation of allocations) {
+      const variant = product.inventory.find((entry) => entry.sku === allocation.sku)
+        || product.inventory.find((entry) => entry.size === item.size);
+      if (variant) variant.stock += allocation.quantity;
+    }
+    await product.save({ session });
   }
   order.inventoryRestored = true;
 }

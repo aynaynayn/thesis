@@ -311,7 +311,7 @@ function OrderSummary({
                 {item.product.name}
               </p>
               <p className="text-xs text-muted-foreground">
-                {item.breed} · {item.size} · Qty {item.quantity}
+                Size {item.size} · Qty {item.quantity}{item.breed ? ` · Previewed as ${item.breed}` : ""}
               </p>
             </div>
             <p className="text-sm font-bold">

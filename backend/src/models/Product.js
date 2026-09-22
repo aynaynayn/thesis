@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 
 const inventorySchema = new mongoose.Schema(
   {
-    breed: { type: String, required: true, trim: true },
+    // Legacy documents may retain this value. New inventory rows do not use it.
+    breed: { type: String, trim: true },
     size: { type: String, required: true, trim: true, uppercase: true },
     sku: { type: String, required: true, trim: true, uppercase: true },
     stock: { type: Number, required: true, min: 0, default: 0 },
@@ -75,6 +76,8 @@ const productSchema = new mongoose.Schema(
     images: { type: [String], default: [] },
     featured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true, index: true },
+    // Retained for search/filter compatibility. It is derived from models and
+    // size charts, never from stock variants.
     availableBreeds: { type: [String], default: [] },
     sizeCharts: { type: [sizeChartSchema], default: [] },
     sizeSpecs: { type: [sizeSpecSchema], default: [] },

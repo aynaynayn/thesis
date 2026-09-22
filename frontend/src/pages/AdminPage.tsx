@@ -1,11 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { LogOut, Package, Plus, RefreshCw, Trash2, X } from "lucide-react";
-import {
-  BREEDS,
-  type Breed,
-  type InventoryItem,
-  type Product,
-} from "../data/products";
+import { type InventoryItem, type Product } from "../data/products";
 import { ordersApi, productsApi, type Order } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
 import { useRouter } from "../context/RouterContext";
@@ -133,7 +128,7 @@ export default function AdminPage() {
               Products and inventory
             </h2>
             <p className="text-muted-foreground mt-1">
-              Create catalogue entries and maintain stock by breed and size.
+              Create catalogue entries and maintain stock by garment size.
             </p>
           </div>
           <button
@@ -183,8 +178,7 @@ export default function AdminPage() {
                       <p className="text-xs text-muted-foreground">
                         {product.inventory
                           .map(
-                            (item) =>
-                              `${item.breed} ${item.size}: ${item.stock}`,
+                            (item) => `${item.size}: ${item.stock}`,
                           )
                           .join(", ")}
                       </p>
@@ -267,7 +261,7 @@ function ProductEditor({
       ...current,
       inventory: [
         ...current.inventory,
-        { breed: BREEDS[0], size: "", sku: "", stock: 0, lowStockThreshold: 3 },
+        { size: "", sku: "", stock: 0, lowStockThreshold: 3 },
       ],
     }));
   const syncSizeSpecs = () =>
@@ -735,17 +729,6 @@ function InventoryRow({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 rounded-xl border border-border p-3">
-      <Label text="Breed">
-        <select
-          value={variant.breed}
-          onChange={(event) => onChange("breed", event.target.value as Breed)}
-          className="input"
-        >
-          {BREEDS.map((breed) => (
-            <option key={breed}>{breed}</option>
-          ))}
-        </select>
-      </Label>
       <Label text="Size">
         <input
           required
@@ -887,7 +870,6 @@ function QueuedModelsSection({
                   onChange={(event) =>
                     update(entry.id, { breed: event.target.value })
                   }
-                  list="queued-model-breeds"
                   placeholder="e.g. Labrador"
                   className="input"
                 />
@@ -927,11 +909,6 @@ function QueuedModelsSection({
             creation.
           </p>
         )}
-        <datalist id="queued-model-breeds">
-          {BREEDS.map((breed) => (
-            <option key={breed} value={breed} />
-          ))}
-        </datalist>
       </div>
       {product && entries.length > 0 && (
         <button
@@ -960,9 +937,7 @@ function ModelUploadSection({
   const [busyBreed, setBusyBreed] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const breeds = [
-    ...new Set([...BREEDS, ...product.models.map((model) => model.breed)]),
-  ];
+  const breeds = product.models.map((model) => model.breed);
 
   const upload = async (breed: string, file: File | null) => {
     if (!breed.trim())
@@ -1330,7 +1305,7 @@ function AdminOrders() {
                       <span className="font-semibold text-foreground">
                         {item.name}
                       </span>{" "}
-                      · {item.breed} · {item.size} · Qty {item.quantity}
+                      · Size {item.size} · Qty {item.quantity}{item.breed ? ` · Previewed as ${item.breed}` : ""}
                     </p>
                   ))}
                 </div>

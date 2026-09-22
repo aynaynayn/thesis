@@ -16,9 +16,16 @@ const itemSchema = new mongoose.Schema({
   product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
   name: { type: String, required: true },
   image: { type: String },
-  breed: { type: String, required: true },
+  // Legacy orders retain their breed label. New orders may save the preview
+  // breed as optional metadata, but it is not an inventory key.
+  breed: { type: String },
   size: { type: String, required: true },
   sku: { type: String, required: true },
+  inventoryAllocations: {
+    type: [{ sku: { type: String, required: true }, quantity: { type: Number, required: true, min: 1 } }],
+    default: [],
+    _id: false,
+  },
   quantity: { type: Number, required: true, min: 1 },
   unitPrice: { type: Number, required: true, min: 0 },
 }, { _id: false });

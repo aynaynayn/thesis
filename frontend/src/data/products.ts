@@ -1,4 +1,4 @@
-export type Breed = "Labrador" | "Pomeranian" | "Dachshund" | "Aspin";
+export type Breed = string;
 
 export type SizeChart = {
   breed: Breed;
@@ -8,7 +8,6 @@ export type SizeSpec = { size: string; neckMinCm: number; neckMaxCm: number; che
 
 export type InventoryItem = {
   _id?: string;
-  breed: Breed;
   size: string;
   sku: string;
   stock: number;
@@ -31,7 +30,7 @@ export type Product = {
   image: string;
   imageCloudinaryPublicId?: string;
   images: string[];
-  availableBreeds: Breed[];
+  availableBreeds: string[];
   sizeCharts: SizeChart[];
   sizeSpecs: SizeSpec[];
   models: ProductModel[];
@@ -40,5 +39,3 @@ export type Product = {
   featured: boolean;
   isActive: boolean;
 };
-
-export const BREEDS: Breed[] = ["Labrador", "Pomeranian", "Dachshund", "Aspin"];

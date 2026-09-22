@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BREEDS, type Product } from "../data/products";
+import type { Product } from "../data/products";
 import { productsApi } from "../lib/api";
 import ProductCard from "../components/ProductCard";
 
@@ -21,9 +21,13 @@ export default function ShopPage() {
     "All",
     ...new Set(products.map((product) => product.category)),
   ];
+  const breeds = [
+    "All",
+    ...new Set(products.flatMap((product) => product.models.map((model) => model.breed))),
+  ];
   const filtered = products.filter(
     (product) =>
-      (breed === "All" || product.availableBreeds.includes(breed as never)) &&
+      (breed === "All" || product.models.some((model) => model.breed === breed)) &&
       (category === "All" || product.category === category) &&
       (!search ||
         `${product.name} ${product.category}`
@@ -60,7 +64,7 @@ export default function ShopPage() {
         />
         <Filter
           label="Breed"
-          values={["All", ...BREEDS]}
+          values={breeds}
           selected={breed}
           onChange={setBreed}
         />

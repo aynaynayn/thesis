@@ -3,7 +3,9 @@ import mongoose from "mongoose";
 const cartItemSchema = new mongoose.Schema(
   {
     product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
-    breed: { type: String, required: true, trim: true },
+    // Old carts can retain their legacy breed field. New cart rows are keyed
+    // solely by product and garment size.
+    breed: { type: String, trim: true },
     petBreed: { type: String, trim: true, maxlength: 80 },
     size: { type: String, required: true, trim: true, uppercase: true },
     quantity: { type: Number, required: true, min: 1, max: 20 },

@@ -27,17 +27,8 @@ export default function ProductPage({ productId }: { productId: string }) {
   const [error, setError] = useState("");
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState("");
+  const [selectedPreviewBreed, setSelectedPreviewBreed] = useState("");
   const [added, setAdded] = useState(false);
-  useEffect(() => {
-    setProduct(null);
-    setError("");
-    void productsApi
-      .get(productId)
-      .then((loadedProduct) => {
-        setProduct(loadedProduct);
-      })
-      .catch((requestError: Error) => setError(requestError.message));
-  }, [productId, user]);
   const [activeTab, setActiveTab] = useState<PreviewTab>("images");
 
   useEffect(() => {
@@ -48,6 +39,11 @@ export default function ProductPage({ productId }: { productId: string }) {
       .get(productId)
       .then((loadedProduct) => {
         setProduct(loadedProduct);
+        setSelectedPreviewBreed((current) =>
+          loadedProduct.models.some((model) => model.breed === current)
+            ? current
+            : loadedProduct.models[0]?.breed || "",
+        );
       })
       .catch((requestError: Error) => setError(requestError.message));
   }, [productId]);
@@ -67,9 +63,9 @@ export default function ProductPage({ productId }: { productId: string }) {
 
   const selectedSizeAvailability = sizes.find((entry) => entry.size === selectedSize)?.stock || 0;
   const canAdd = selectedSizeAvailability > 0;
-  const exactModel = selectedPet ? product.models.find((model) => model.breed.trim().toLowerCase() === selectedPet.breed.trim().toLowerCase()) : undefined;
-  const fallbackModel = selectedPet && !exactModel ? product.models.find((model) => model.breed.trim().toLowerCase().includes("aspin")) : undefined;
-  const selectedModel = exactModel || fallbackModel;
+  const selectedModel = product.models.find(
+    (model) => model.breed === selectedPreviewBreed,
+  );
   const add = async () => {
     if (!selectedSize || !canAdd) return;
     if (!user) {
@@ -77,7 +73,7 @@ export default function ProductPage({ productId }: { productId: string }) {
       return;
     }
     try {
-      await addItem(product, selectedSize, selectedPet?.breed);
+      await addItem(product, selectedSize, selectedPreviewBreed || undefined);
       setAdded(true);
       window.setTimeout(() => setAdded(false), 1800);
     } catch (requestError) {
@@ -122,10 +118,7 @@ export default function ProductPage({ productId }: { productId: string }) {
               />
             </div>
           ) : (
-            <PreviewPanel
-              selectedModelPath={selectedModel?.modelPath}
-              referenceNote={selectedPet && !exactModel && fallbackModel ? "An exact 3D model is not available for this breed. A general reference model is shown instead. Size recommendation is based on your pet's recorded measurements." : undefined}
-            />
+            <PreviewPanel selectedModelPath={selectedModel?.modelPath} />
           )}
         </div>
         <div className="flex flex-col gap-6">
@@ -143,31 +136,57 @@ export default function ProductPage({ productId }: { productId: string }) {
               {product.description}
             </p>
           </div>
-          <div>
-            <label className="flex max-w-sm flex-col gap-1.5 text-sm font-bold text-foreground">Select pet <select value={selectedPetId} onChange={(event) => { setSelectedPetId(event.target.value); setSelectedSize(null); }} className="input"> <option value="">Choose a saved pet</option>{user?.petProfiles.map((pet) => <option key={pet.id} value={pet.id}>{pet.name} / {pet.breed}</option>)}</select></label>
-          </div>
-          {selectedPet && (
-            <div>
-              <p className="text-sm font-bold text-foreground mb-2">
-                Select Size <span className="text-destructive">*</span>
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {sizes.map((variant) => (
-                  <button
-                    key={variant.size}
-                    disabled={variant.stock === 0}
-                    onClick={() => setSelectedSize(variant.size)}
-                    className={`w-14 h-12 rounded-xl text-sm font-bold border disabled:opacity-40 ${selectedSize === variant.size ? "bg-primary text-primary-foreground border-primary" : "border-border bg-card text-foreground"}`}
-                  >
-                    {variant.size}
-                  </button>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="flex max-w-sm flex-col gap-1.5 text-sm font-bold text-foreground">
+              Preview breed
+              <select
+                value={selectedPreviewBreed}
+                onChange={(event) => setSelectedPreviewBreed(event.target.value)}
+                disabled={!product.models.length}
+                className="input"
+              >
+                {!product.models.length && <option>No 3D models uploaded</option>}
+                {product.models.map((model) => (
+                  <option key={model.breed} value={model.breed}>{model.breed}</option>
                 ))}
-              </div>
-              {recommendation ? <Recommendation recommendation={recommendation} petName={selectedPet?.name || "your pet"} available={recommendedAvailability > 0} /> : selectedPet ? <p className="mt-4 text-sm text-muted-foreground">No exact size match. Please review the size measurements.</p> : null}
+              </select>
+            </label>
+            {user && (
+              <label className="flex max-w-sm flex-col gap-1.5 text-sm font-bold text-foreground">
+                Saved pet for size recommendation
+                <select
+                  value={selectedPetId}
+                  onChange={(event) => setSelectedPetId(event.target.value)}
+                  className="input"
+                >
+                  <option value="">Optional</option>
+                  {user.petProfiles.map((pet) => (
+                    <option key={pet.id} value={pet.id}>{pet.name} / {pet.breed}</option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-foreground mb-2">
+              Select Size <span className="text-destructive">*</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {sizes.map((variant) => (
+                <button
+                  key={variant.size}
+                  disabled={variant.stock === 0}
+                  onClick={() => setSelectedSize(variant.size)}
+                  className={`w-14 h-12 rounded-xl text-sm font-bold border disabled:opacity-40 ${selectedSize === variant.size ? "bg-primary text-primary-foreground border-primary" : "border-border bg-card text-foreground"}`}
+                >
+                  {variant.size}
+                </button>
+              ))}
             </div>
-          )}
+            {recommendation ? <Recommendation recommendation={recommendation} petName={selectedPet?.name || "your pet"} available={recommendedAvailability > 0} /> : selectedPet ? <p className="mt-4 text-sm text-muted-foreground">No exact size match. Please review the size measurements.</p> : null}
+          </div>
           <p className="text-xs text-muted-foreground">
-            {selectedSize ? selectedSizeAvailability > 0 ? `${selectedSizeAvailability} in stock` : "Currently unavailable" : "Select a pet and size to see availability."}
+            {selectedSize ? selectedSizeAvailability > 0 ? `${selectedSizeAvailability} in stock` : "Currently unavailable" : "Select a size to see availability."}
           </p>
           {error && <p className="text-sm text-destructive">{error}</p>}
           <button

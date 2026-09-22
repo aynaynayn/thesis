@@ -56,15 +56,15 @@ function validateInventory(inventory = []) {
       new Error("At least one inventory variant is required"),
       { statusCode: 400 },
     );
-  const variants = new Set();
+  const sizes = new Set();
   const skus = new Set();
   for (const item of inventory) {
-    const breed = item.breed?.trim();
+    const legacyBreed = item.breed?.trim();
     const size = item.size?.trim().toUpperCase();
     const sku = item.sku?.trim().toUpperCase();
-    if (!breed || !size || !sku)
+    if (!size || !sku)
       throw Object.assign(
-        new Error("Every inventory item needs breed, size, and SKU"),
+        new Error("Every inventory item needs size and SKU"),
         { statusCode: 400 },
       );
     if (!Number.isInteger(item.stock) || item.stock < 0)
@@ -72,39 +72,37 @@ function validateInventory(inventory = []) {
         new Error("Inventory stock must be a non-negative whole number"),
         { statusCode: 400 },
       );
-    const variant = `${breed}:${size}`;
-    if (variants.has(variant) || skus.has(sku))
+    if ((sizes.has(size) && !legacyBreed) || skus.has(sku))
       throw Object.assign(
-        new Error(
-          "Inventory breed/size and SKU values must be unique per product",
-        ),
+        new Error("Inventory size and SKU values must be unique per product"),
         { statusCode: 400 },
       );
-    variants.add(variant);
+    sizes.add(size);
     skus.add(sku);
-    item.breed = breed;
+    if (legacyBreed) item.breed = legacyBreed;
     item.size = size;
     item.sku = sku;
   }
 }
 
+function deriveAvailableBreeds(data) {
+  return [
+    ...new Set([
+      ...(data.models || []).map((model) => model.breed?.trim()),
+      ...(data.sizeCharts || []).map((chart) => chart.breed?.trim()),
+    ].filter(Boolean)),
+  ];
+}
+
 function normalizeProductData(data) {
   validateInventory(data.inventory);
-  const breeds = [...new Set(data.inventory.map((item) => item.breed))];
-  data.availableBreeds = breeds;
   if (data.sizeCharts !== undefined && !Array.isArray(data.sizeCharts)) {
     throw Object.assign(new Error("Size charts must be an array"), {
       statusCode: 400,
     });
   }
   if (data.sizeCharts) {
-    for (const chart of data.sizeCharts) {
-      if (!breeds.includes(chart.breed))
-        throw Object.assign(
-          new Error("Size charts can only be created for available breeds"),
-          { statusCode: 400 },
-        );
-    }
+    for (const chart of data.sizeCharts) chart.breed = String(chart.breed || "").trim();
   }
   if (data.sizeSpecs !== undefined && !Array.isArray(data.sizeSpecs))
     throw Object.assign(new Error("Size specifications must be an array"), {
@@ -143,6 +141,7 @@ function normalizeProductData(data) {
       spec[maxKey] = max;
     }
   }
+  data.availableBreeds = deriveAvailableBreeds(data);
 }
 
 function publicFilter(query) {
@@ -330,11 +329,10 @@ export async function updateProduct(req, res, next) {
 
 export async function adjustInventory(req, res, next) {
   try {
-    const { breed, size, quantity, reason } = req.body;
-    if (!breed || !size || !Number.isInteger(quantity) || quantity === 0)
+    const { size, quantity, reason } = req.body;
+    if (!size || !Number.isInteger(quantity) || quantity === 0)
       return res.status(400).json({
-        message:
-          "Breed, size, and a non-zero whole-number quantity are required",
+        message: "Size and a non-zero whole-number quantity are required",
       });
     const normalizedSize = size.trim().toUpperCase();
     const stockConstraint =
@@ -343,11 +341,7 @@ export async function adjustInventory(req, res, next) {
       {
         _id: req.params.id,
         inventory: {
-          $elemMatch: {
-            breed: breed.trim(),
-            size: normalizedSize,
-            stock: stockConstraint,
-          },
+          $elemMatch: { size: normalizedSize, stock: stockConstraint },
         },
       },
       { $inc: { "inventory.$.stock": quantity } },
@@ -360,7 +354,6 @@ export async function adjustInventory(req, res, next) {
     res.json({
       product,
       adjustment: {
-        breed: breed.trim(),
         size: normalizedSize,
         quantity,
         reason: reason?.trim() || null,
@@ -414,6 +407,7 @@ export async function uploadProductModel(req, res, next) {
         cloudinaryPublicId: asset.public_id,
       };
 
+    product.availableBreeds = deriveAvailableBreeds(product);
     await product.save();
     await deleteModelAsset(previousPublicId).catch(() => {});
 
@@ -441,6 +435,7 @@ export async function deleteProductModel(req, res, next) {
       return res.status(404).json({ message: "3D model not found" });
 
     const [model] = product.models.splice(index, 1);
+    product.availableBreeds = deriveAvailableBreeds(product);
     await product.save();
     await deleteModelAsset(model.cloudinaryPublicId).catch(() => {});
     res.json({ product });

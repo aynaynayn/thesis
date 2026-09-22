@@ -73,7 +73,7 @@ export const productsApi = {
     const data = await request<{ product: ApiProduct }>(`/products/${id}`, { method: "PATCH", body: JSON.stringify(product) });
     return toProduct(data.product);
   },
-  async adjustInventory(id: string, body: { breed: string; size: string; quantity: number; reason: string }) {
+  async adjustInventory(id: string, body: { size: string; quantity: number; reason: string }) {
     const data = await request<{ product: ApiProduct }>(`/products/${id}/inventory`, { method: "PATCH", body: JSON.stringify(body) });
     return toProduct(data.product);
   },
@@ -102,9 +102,9 @@ export const productsApi = {
   remove: (id: string) => request<void>(`/products/${id}`, { method: "DELETE" }),
 };
 
-export type CartItem = { id: string; product: Product; breed: string; petBreed?: string; size: string; quantity: number };
-type ApiCartItem = { id: string; _id?: string; product: ApiProduct; breed: string; petBreed?: string; size: string; quantity: number };
-function toCartItems(items: ApiCartItem[]): CartItem[] { return items.map((item) => ({ id: item.id || item._id || "", product: toProduct(item.product), breed: item.breed, petBreed: item.petBreed, size: item.size, quantity: item.quantity })); }
+export type CartItem = { id: string; product: Product; petBreed?: string; size: string; quantity: number };
+type ApiCartItem = { id: string; _id?: string; product: ApiProduct; petBreed?: string; size: string; quantity: number };
+function toCartItems(items: ApiCartItem[]): CartItem[] { return items.map((item) => ({ id: item.id || item._id || "", product: toProduct(item.product), petBreed: item.petBreed, size: item.size, quantity: item.quantity })); }
 
 export const cartApi = {
   async get() { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart"); return toCartItems(data.cart.items); },
@@ -114,7 +114,7 @@ export const cartApi = {
   clear: () => request<void>("/cart", { method: "DELETE" }),
 };
 
-export type Order = { id: string; _id: string; orderNumber: string; items: { product: string; name: string; image: string; breed: string; size: string; sku: string; quantity: number; unitPrice: number }[]; deliveryAddress: { firstName: string; lastName: string; email: string; phone: string; line1: string; barangay?: string; city: string; province: string; postalCode?: string }; paymentMethod: "cod" | "gcash" | "maya"; paymentReference?: string; paymentStatus: "pending" | "paid" | "failed" | "refunded"; status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"; subtotal: number; shippingFee: number; total: number; createdAt: string };
+export type Order = { id: string; _id: string; orderNumber: string; items: { product: string; name: string; image: string; breed?: string; size: string; sku: string; quantity: number; unitPrice: number }[]; deliveryAddress: { firstName: string; lastName: string; email: string; phone: string; line1: string; barangay?: string; city: string; province: string; postalCode?: string }; paymentMethod: "cod" | "gcash" | "maya"; paymentReference?: string; paymentStatus: "pending" | "paid" | "failed" | "refunded"; status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"; subtotal: number; shippingFee: number; total: number; createdAt: string };
 export const ordersApi = {
   create: (body: { deliveryAddress: Order["deliveryAddress"]; paymentMethod: Order["paymentMethod"]; paymentReference?: string }) => request<{ order: Order }>("/orders", { method: "POST", body: JSON.stringify(body) }),
   mine: () => request<{ orders: Order[] }>("/orders"),

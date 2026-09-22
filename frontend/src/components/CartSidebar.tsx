@@ -61,7 +61,7 @@ export default function CartSidebar() {
                       {item.product.name}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {item.breed} · Size {item.size}
+                      Size {item.size}{item.petBreed ? ` · Previewed as ${item.petBreed}` : ""}
                     </p>
                     <p className="text-sm font-bold text-primary mt-1">
                       ₱{(item.product.price * item.quantity).toLocaleString()}
