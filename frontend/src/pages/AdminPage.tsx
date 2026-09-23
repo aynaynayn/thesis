@@ -416,7 +416,7 @@ function ProductEditor({
   const updateProductFromModelUpload = async (updatedProduct: Product) => {
     setProduct(updatedProduct);
     setDraft(productDraft(updatedProduct));
-    await onProductSaved();
+    void onProductSaved().catch(() => {});
   };
   const currentImage = imagePreview || product?.image;
 

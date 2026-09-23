@@ -375,6 +375,13 @@ export async function uploadProductModel(req, res, next) {
         statusCode: 400,
       });
 
+    console.info("3D MODEL UPLOAD START", {
+      productId: req.params.id,
+      breed,
+      filename: req.file.originalname,
+      size: req.file.size,
+    });
+
     const product = await Product.findById(req.params.id);
     if (!product)
       throw Object.assign(new Error("Product not found"), { statusCode: 404 });
@@ -385,6 +392,11 @@ export async function uploadProductModel(req, res, next) {
       req.file.originalname,
     );
     uploadedPublicId = asset.public_id;
+    console.info("3D MODEL UPLOAD COMPLETE", {
+      productId: req.params.id,
+      breed,
+      publicId: asset.public_id,
+    });
     const existingIndex = product.models.findIndex(
       (model) => model.breed.toLowerCase() === breed.toLowerCase(),
     );
@@ -419,6 +431,12 @@ export async function uploadProductModel(req, res, next) {
     });
   } catch (error) {
     await deleteModelAsset(uploadedPublicId).catch(() => {});
+    console.error("3D MODEL UPLOAD FAILED", {
+      productId: req.params.id,
+      message: error.message,
+      code: error.code,
+      httpCode: error.http_code,
+    });
     next(error);
   }
 }
