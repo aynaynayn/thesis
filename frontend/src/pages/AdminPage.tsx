@@ -1008,8 +1008,8 @@ function ModelUploadSection({
         Upload one complete GLB model for each breed, up to 80 MB. The model
         should already contain the dog wearing this product.
       </p>
-      {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
-      {success && <p className="mt-3 text-sm text-green-700">{success}</p>}
+      {error && <p aria-live="polite" className="mt-3 text-sm text-destructive">{error}</p>}
+      {success && <p aria-live="polite" className="mt-3 text-sm text-green-700">{success}</p>}
       <div className="mt-4 space-y-3">
         {breeds.map((breed) => {
           const model = product.models.find(
@@ -1019,7 +1019,7 @@ function ModelUploadSection({
           return (
             <div
               key={breed.toLowerCase()}
-              className="flex items-center justify-between gap-4 rounded-xl border border-border p-4"
+              className="flex min-w-0 flex-col gap-3 rounded-xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <input
                 ref={(element) => {
@@ -1034,13 +1034,13 @@ function ModelUploadSection({
                   event.currentTarget.value = "";
                 }}
               />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-semibold text-foreground">{breed}</p>
                 {model ? (
                   <>
                     <p className="text-xs text-green-700">Uploaded</p>
                     <p className="text-xs text-muted-foreground">
-                      {model.modelPath}
+                      Cloudinary model ready for preview
                     </p>
                   </>
                 ) : (
@@ -1049,7 +1049,7 @@ function ModelUploadSection({
                   </p>
                 )}
               </div>
-              <div className="flex shrink-0 gap-3">
+              <div className="flex shrink-0 gap-4">
                 {model && (
                   <button
                     type="button"
@@ -1084,7 +1084,7 @@ function ModelUploadSection({
           );
         })}
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-[1fr_1.5fr_auto] rounded-xl border border-border p-3">
+      <div className="mt-5 grid min-w-0 gap-3 rounded-xl border border-border p-3 sm:grid-cols-[1fr_1.5fr_auto]">
         <Label text="Additional breed">
           <input
             value={customBreed}
