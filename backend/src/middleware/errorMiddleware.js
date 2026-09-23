@@ -5,7 +5,16 @@ export function notFound(req, _res, next) {
 }
 
 export function errorHandler(error, _req, res, _next) {
-  console.error("API ERROR:", err);
+  console.error("API ERROR:", {
+    name: error.name,
+    message: error.message,
+    code: error.code,
+  });
+  if (error.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      message: "The GLB file is too large. Maximum upload size is 80 MB.",
+    });
+  }
   const statusCode =
     error.statusCode ||
     (["ValidationError", "CastError"].includes(error.name) ? 400 : 500);

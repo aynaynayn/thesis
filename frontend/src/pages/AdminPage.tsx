@@ -727,6 +727,17 @@ function InventoryRow({
   onChange: (key: keyof InventoryItem, value: string | number) => void;
   onRemove: () => void;
 }) {
+  const [stockText, setStockText] = useState(String(variant.stock));
+  const [thresholdText, setThresholdText] = useState(
+    String(variant.lowStockThreshold),
+  );
+
+  useEffect(() => setStockText(String(variant.stock)), [variant.stock]);
+  useEffect(
+    () => setThresholdText(String(variant.lowStockThreshold)),
+    [variant.lowStockThreshold],
+  );
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 rounded-xl border border-border p-3">
       <Label text="Size">
@@ -752,8 +763,12 @@ function InventoryRow({
           type="number"
           min="0"
           required
-          value={variant.stock}
-          onChange={(event) => onChange("stock", Number(event.target.value))}
+          value={stockText}
+          onChange={(event) => {
+            setStockText(event.target.value);
+            if (event.target.value !== "")
+              onChange("stock", Number(event.target.value));
+          }}
           placeholder="0"
           className="input"
         />
@@ -762,10 +777,12 @@ function InventoryRow({
         <input
           type="number"
           min="0"
-          value={variant.lowStockThreshold}
-          onChange={(event) =>
-            onChange("lowStockThreshold", Number(event.target.value))
-          }
+          value={thresholdText}
+          onChange={(event) => {
+            setThresholdText(event.target.value);
+            if (event.target.value !== "")
+              onChange("lowStockThreshold", Number(event.target.value));
+          }}
           placeholder="3"
           className="input"
         />
@@ -988,8 +1005,8 @@ function ModelUploadSection({
     <section className="border-t border-border pt-5">
       <h3 className="font-bold text-foreground">3D Models</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Upload one complete GLB model for each breed. The model should already
-        contain the dog wearing this product.
+        Upload one complete GLB model for each breed, up to 80 MB. The model
+        should already contain the dog wearing this product.
       </p>
       {error && <p className="mt-3 text-sm text-destructive">{error}</p>}
       {success && <p className="mt-3 text-sm text-green-700">{success}</p>}
