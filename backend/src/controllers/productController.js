@@ -420,8 +420,18 @@ export async function uploadProductModel(req, res, next) {
       };
 
     product.availableBreeds = deriveAvailableBreeds(product);
+    console.info("3D MODEL DATABASE SAVE START", {
+      productId: req.params.id,
+      breed,
+      operation: isReplacement ? "replace" : "add",
+      modelBreeds: product.models.map((model) => model.breed),
+    });
     await product.save();
-    await deleteModelAsset(previousPublicId).catch(() => {});
+    console.info("3D MODEL DATABASE SAVE COMPLETE", {
+      productId: req.params.id,
+      breed,
+      operation: isReplacement ? "replace" : "add",
+    });
 
     res.status(isReplacement ? 200 : 201).json({
       product,
@@ -429,14 +439,30 @@ export async function uploadProductModel(req, res, next) {
         (model) => model.breed.toLowerCase() === breed.toLowerCase(),
       ),
     });
+    // Cleanup must never hold the admin request open after a successful save.
+    void deleteModelAsset(previousPublicId).catch((cleanupError) =>
+      console.error("3D MODEL PREVIOUS-ASSET CLEANUP FAILED", {
+        productId: req.params.id,
+        publicId: previousPublicId,
+        message: cleanupError.message,
+      }),
+    );
   } catch (error) {
-    await deleteModelAsset(uploadedPublicId).catch(() => {});
     console.error("3D MODEL UPLOAD FAILED", {
       productId: req.params.id,
       message: error.message,
       code: error.code,
       httpCode: error.http_code,
     });
+    // Report the original error immediately. Cloudinary cleanup is best effort
+    // and must not turn a quick validation/database error into a long timeout.
+    void deleteModelAsset(uploadedPublicId).catch((cleanupError) =>
+      console.error("3D MODEL FAILED-ASSET CLEANUP FAILED", {
+        productId: req.params.id,
+        publicId: uploadedPublicId,
+        message: cleanupError.message,
+      }),
+    );
     next(error);
   }
 }
