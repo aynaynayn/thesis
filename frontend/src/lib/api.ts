@@ -114,11 +114,11 @@ export const cartApi = {
   clear: () => request<void>("/cart", { method: "DELETE" }),
 };
 
-export type Order = { id: string; _id: string; orderNumber: string; items: { product: string; name: string; image: string; breed?: string; size: string; sku: string; quantity: number; unitPrice: number }[]; deliveryAddress: { firstName: string; lastName: string; email: string; phone: string; line1: string; barangay?: string; city: string; province: string; postalCode?: string }; paymentMethod: "cod" | "gcash" | "maya"; paymentReference?: string; paymentStatus: "pending" | "paid" | "failed" | "refunded"; status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"; subtotal: number; shippingFee: number; total: number; createdAt: string };
+export type Order = { id: string; _id: string; orderNumber: string; items: { product: string; name: string; image: string; breed?: string; size: string; sku: string; quantity: number; unitPrice: number }[]; deliveryAddress: { firstName: string; lastName: string; email: string; phone: string; line1: string; barangay?: string; city: string; province: string; postalCode?: string }; paymentMethod: "cod" | "gcash" | "maya"; paymentReference?: string; paymentStatus: "pending" | "paid" | "failed" | "refunded"; status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"; cancellationReason?: string; cancelledBy?: "customer" | "admin"; cancelledAt?: string; subtotal: number; shippingFee: number; total: number; createdAt: string };
 export const ordersApi = {
-  create: (body: { deliveryAddress: Order["deliveryAddress"]; paymentMethod: Order["paymentMethod"]; paymentReference?: string }) => request<{ order: Order }>("/orders", { method: "POST", body: JSON.stringify(body) }),
+  create: (body: { deliveryAddress: Order["deliveryAddress"]; paymentMethod: "cod" }) => request<{ order: Order }>("/orders", { method: "POST", body: JSON.stringify(body) }),
   mine: () => request<{ orders: Order[] }>("/orders"),
   cancel: (id: string) => request<{ order: Order }>(`/orders/${id}/cancel`, { method: "PATCH" }),
   admin: () => request<{ orders: Order[] }>("/orders/admin/all"),
-  updateStatus: (id: string, status: Order["status"], paymentStatus?: Order["paymentStatus"]) => request<{ order: Order }>(`/orders/admin/${id}/status`, { method: "PATCH", body: JSON.stringify({ status, paymentStatus }) }),
+  updateStatus: (id: string, status: Order["status"], paymentStatus?: Order["paymentStatus"], cancellationReason?: string) => request<{ order: Order }>(`/orders/admin/${id}/status`, { method: "PATCH", body: JSON.stringify({ status, paymentStatus, cancellationReason }) }),
 };

@@ -264,6 +264,7 @@ export default function AccountPage() {
 function MyOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -273,6 +274,29 @@ function MyOrders() {
       .catch((requestError: Error) => setError(requestError.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const cancel = async (order: Order) => {
+    if (!window.confirm(`Cancel order ${order.orderNumber}? This cannot be undone.`))
+      return;
+    setCancelling(order.id);
+    setError("");
+    try {
+      const result = await ordersApi.cancel(order.id);
+      setOrders((current) =>
+        current.map((item) =>
+          item.id === order.id ? { ...item, ...result.order } : item,
+        ),
+      );
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to cancel this order.",
+      );
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-6">
@@ -301,6 +325,21 @@ function MyOrders() {
               <p className="mt-3 text-sm text-muted-foreground">
                 {order.items.map((item) => `${item.name} · ${item.size} × ${item.quantity}`).join("; ")}
               </p>
+              {order.status === "cancelled" && order.cancellationReason && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Cancellation: {order.cancellationReason}
+                </p>
+              )}
+              {["pending", "confirmed"].includes(order.status) && (
+                <button
+                  type="button"
+                  disabled={cancelling === order.id}
+                  onClick={() => void cancel(order)}
+                  className="mt-4 border-b border-destructive pb-0.5 text-xs font-bold uppercase tracking-[0.1em] text-destructive disabled:opacity-50"
+                >
+                  {cancelling === order.id ? "Cancelling" : "Cancel order"}
+                </button>
+              )}
             </article>
           ))}
         </div>
@@ -310,7 +349,10 @@ function MyOrders() {
 }
 
 function formatStatus(status: string) {
-  return status[0].toUpperCase() + status.slice(1);
+  return status
+    .split("_")
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
 }
 
 function PetField({

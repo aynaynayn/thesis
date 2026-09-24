@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1580" viewBox="0 0 1800 1580"><defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto"><path d="M0 0L0 6L7 3Z" fill="#222"/></marker></defs><rect width="1800" height="1580" fill="white"/><style>text{font-family:Arial,sans-serif;font-size:21px;fill:#111}.n{fill:white;stroke:#222;stroke-width:2}.e{fill:none;stroke:#222;stroke-width:2;marker-end:url(#a)}.l{font-size:18px;font-weight:bold}</style><text x="900" y="45" text-anchor="middle" style="font-size:30px;font-weight:bold">PawFit — Admin / Seller System Workflow</text><text x="900" y="80" text-anchor="middle" style="font-size:19px">Current implementation • Read down each column, then continue at the matching connector</text>
+<rect class="n" x="155" y="122" width="290" height="86" rx="43"/>
+<text text-anchor="middle" x="300" y="159"><tspan x="300" dy="0">Start:</tspan><tspan x="300" dy="26">Admin Logged In</tspan></text>
+<polygon class="n" points="180,262 450,262 420,348 150,348"/>
+<text text-anchor="middle" x="300" y="299"><tspan x="300" dy="0">Display Administration</tspan><tspan x="300" dy="26">Page</tspan></text>
+<polygon class="n" points="300,398 405,465 300,532 195,465"/>
+<text text-anchor="middle" x="300" y="459"><tspan x="300" dy="0">Manage</tspan><tspan x="300" dy="26">Products?</tspan></text>
+<rect class="n" x="155" y="597" width="290" height="86" rx="0"/>
+<text text-anchor="middle" x="300" y="634"><tspan x="300" dy="0">Add, Edit, or Delete</tspan><tspan x="300" dy="26">Product</tspan></text>
+<polygon class="n" points="180,747 450,747 420,833 150,833"/>
+<text text-anchor="middle" x="300" y="771"><tspan x="300" dy="0">Enter Product, Size, Stock,</tspan><tspan x="300" dy="26">Image / 3D Model Data</tspan><tspan x="300" dy="26">as Applicable</tspan></text>
+<rect class="n" x="155" y="897" width="290" height="86" rx="0"/>
+<text text-anchor="middle" x="300" y="934"><tspan x="300" dy="0">Save Changes or</tspan><tspan x="300" dy="26">Confirm Deletion</tspan></text>
+<polygon class="n" points="180,1047 450,1047 420,1133 150,1133"/>
+<text text-anchor="middle" x="300" y="1084"><tspan x="300" dy="0">Display Updated Products</tspan><tspan x="300" dy="26">or Error</tspan></text>
+<circle class="n" cx="300" cy="1280" r="25"/>
+<text text-anchor="middle" x="300" y="1287"><tspan x="300" dy="0">A</tspan></text>
+<path class="e" d="M300,208 V262"/>
+<path class="e" d="M300,348 V398"/>
+<path class="e" d="M300,532 V597"/>
+<text class="l" x="312" y="564.5">Yes</text>
+<path class="e" d="M300,683 V747"/>
+<path class="e" d="M300,833 V897"/>
+<path class="e" d="M300,983 V1047"/>
+<path class="e" d="M300,1133 V1255"/>
+<path class="e" d="M195,465 H70 V1190 H300 V1255"/>
+<text class="l" x="90" y="450">No</text>
+<circle class="n" cx="900" cy="165" r="25"/>
+<text text-anchor="middle" x="900" y="172"><tspan x="900" dy="0">A</tspan></text>
+<polygon class="n" points="780,262 1050,262 1020,348 750,348"/>
+<text text-anchor="middle" x="900" y="299"><tspan x="900" dy="0">Display Orders and</tspan><tspan x="900" dy="26">Current Statuses</tspan></text>
+<rect class="n" x="755" y="422" width="290" height="86" rx="0"/>
+<text text-anchor="middle" x="900" y="472"><tspan x="900" dy="0">Review Order Details</tspan></text>
+<polygon class="n" points="900,563 1005,630 900,697 795,630"/>
+<text text-anchor="middle" x="900" y="624"><tspan x="900" dy="0">Change Order</tspan><tspan x="900" dy="26">Status?</tspan></text>
+<polygon class="n" points="780,762 1050,762 1020,848 750,848"/>
+<text text-anchor="middle" x="900" y="812"><tspan x="900" dy="0">Select Order Status</tspan></text>
+<polygon class="n" points="900,903 1005,970 900,1037 795,970"/>
+<text text-anchor="middle" x="900" y="964"><tspan x="900" dy="0">Selected</tspan><tspan x="900" dy="26">Cancelled?</tspan></text>
+<rect class="n" x="755" y="1107" width="290" height="86" rx="0"/>
+<text text-anchor="middle" x="900" y="1144"><tspan x="900" dy="0">Submit and Validate</tspan><tspan x="900" dy="26">Order Update</tspan></text>
+<polygon class="n" points="780,1257 1050,1257 1020,1343 750,1343"/>
+<text text-anchor="middle" x="900" y="1294"><tspan x="900" dy="0">Display Updated Order</tspan><tspan x="900" dy="26">or Error</tspan></text>
+<circle class="n" cx="900" cy="1410" r="25"/>
+<text text-anchor="middle" x="900" y="1417"><tspan x="900" dy="0">B</tspan></text>
+<path class="e" d="M900,190 V262"/>
+<path class="e" d="M900,348 V422"/>
+<path class="e" d="M900,508 V563"/>
+<path class="e" d="M900,697 V762"/>
+<text class="l" x="912" y="729.5">Yes</text>
+<path class="e" d="M900,848 V903"/>
+<path class="e" d="M900,1037 V1107"/>
+<text class="l" x="912" y="1072">No</text>
+<path class="e" d="M900,1193 V1257"/>
+<path class="e" d="M900,1343 V1385"/>
+<path class="e" d="M1005,630 H1150 V1380 H900 V1385"/>
+<text class="l" x="1070" y="615">No</text>
+<path class="e" d="M795,970 H635 V1047"/>
+<text class="l" x="695" y="953">Yes</text>
+<polygon class="n" points="557,1047 737,1047 713,1120 533,1120"/><text text-anchor="middle" x="635" y="1078" style="font-size:18px"><tspan x="635">Enter Cancellation</tspan><tspan x="635" dy="23">Reason</tspan></text>
+<path class="e" d="M635,1120 V1220 H710 V1150 H755"/>
+<circle class="n" cx="1500" cy="165" r="25"/>
+<text text-anchor="middle" x="1500" y="172"><tspan x="1500" dy="0">B</tspan></text>
+<polygon class="n" points="1500,273 1605,340 1500,407 1395,340"/>
+<text text-anchor="middle" x="1500" y="334"><tspan x="1500" dy="0">Change Payment</tspan><tspan x="1500" dy="26">Status?</tspan></text>
+<polygon class="n" points="1380,487 1650,487 1620,573 1350,573"/>
+<text text-anchor="middle" x="1500" y="511"><tspan x="1500" dy="0">Select Payment Status:</tspan><tspan x="1500" dy="26">Pending, Paid, Failed,</tspan><tspan x="1500" dy="26">or Refunded</tspan></text>
+<rect class="n" x="1355" y="667" width="290" height="86" rx="0"/>
+<text text-anchor="middle" x="1500" y="704"><tspan x="1500" dy="0">Submit and Validate</tspan><tspan x="1500" dy="26">Payment Status Update</tspan></text>
+<polygon class="n" points="1380,847 1650,847 1620,933 1350,933"/>
+<text text-anchor="middle" x="1500" y="884"><tspan x="1500" dy="0">Display Updated Payment</tspan><tspan x="1500" dy="26">Status or Error</tspan></text>
+<polygon class="n" points="1500,1003 1605,1070 1500,1137 1395,1070"/>
+<text text-anchor="middle" x="1500" y="1064"><tspan x="1500" dy="0">Manage More</tspan><tspan x="1500" dy="26">Orders?</tspan></text>
+<rect class="n" x="1355" y="1217" width="290" height="86" rx="0"/>
+<text text-anchor="middle" x="1500" y="1267"><tspan x="1500" dy="0">Sign Out</tspan></text>
+<rect class="n" x="1355" y="1367" width="290" height="86" rx="43"/>
+<text text-anchor="middle" x="1500" y="1417"><tspan x="1500" dy="0">End</tspan></text>
+<path class="e" d="M1500,190 V273"/>
+<path class="e" d="M1500,407 V487"/>
+<text class="l" x="1512" y="447">Yes</text>
+<path class="e" d="M1500,573 V667"/>
+<path class="e" d="M1500,753 V847"/>
+<path class="e" d="M1500,933 V1003"/>
+<path class="e" d="M1500,1137 V1217"/>
+<text class="l" x="1512" y="1177">No</text>
+<path class="e" d="M1500,1303 V1367"/>
+<path class="e" d="M1605,340 H1740 V970 H1500 V1003"/>
+<text class="l" x="1665" y="325">No</text>
+<path class="e" d="M1395,1070 H1260 V1185"/>
+<text class="l" x="1310" y="1055">Yes</text>
+<circle class="n" cx="1260" cy="1210" r="25"/>
+<text text-anchor="middle" x="1260" y="1217"><tspan x="1260" dy="0">A</tspan></text>
+<text x="60" y="1505" style="font-size:18px">Order statuses: Pending, Confirmed, Processing, Shipped, Delivered, Cancelled. Dropdown changes submit immediately.</text><text x="60" y="1535" style="font-size:18px">Successful cancellation restores stock once. Payment statuses are manual records; changing them does not collect or refund money.</text></svg>

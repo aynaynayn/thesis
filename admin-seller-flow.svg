@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1330" viewBox="0 0 1500 1330"><defs><marker id="arrow" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L8,3 z" fill="#334155"/></marker></defs><rect width="1500" height="1330" fill="#fff"/><style>text{font-family:Arial,sans-serif;fill:#172033;font-size:17px}.node{fill:#fff;stroke:#334155;stroke-width:2}.edge{fill:none;stroke:#334155;stroke-width:2;marker-end:url(#arrow)}.label{font-size:15px;font-weight:bold}</style><text x="750" y="35" text-anchor="middle" style="font-size:25px;font-weight:bold">PawFit — General Admin / Seller Flow (COD)</text>
+<text text-anchor="middle" x="260" y="76" style="font-size:18px;font-weight:bold;fill:#486582">1  PRODUCT MANAGEMENT</text>
+<text text-anchor="middle" x="750" y="76" style="font-size:18px;font-weight:bold;fill:#486582">2  ORDER MANAGEMENT</text>
+<text text-anchor="middle" x="1240" y="76" style="font-size:18px;font-weight:bold;fill:#486582">3  PAYMENT AND EXIT</text>
+<rect class="node" x="130" y="103" width="260" height="74" rx="37"/>
+<text text-anchor="middle" x="260" y="146"><tspan x="260" dy="0">Start: Admin Logged In</tspan></text>
+<polygon class="node" points="150,228 400,228 370,302 120,302"/>
+<text text-anchor="middle" x="260" y="271"><tspan x="260" dy="0">Display Admin Dashboard</tspan></text>
+<polygon class="node" points="260,342 350,400 260,458 170,400"/>
+<text text-anchor="middle" x="260" y="395"><tspan x="260" dy="0">Manage</tspan><tspan x="260" dy="22">Products?</tspan></text>
+<rect class="node" x="130" y="518" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="260" y="561"><tspan x="260" dy="0">Add or Select Product</tspan></text>
+<polygon class="node" points="150,648 400,648 370,722 120,722"/>
+<text text-anchor="middle" x="260" y="680"><tspan x="260" dy="0">Enter Details, Price,</tspan><tspan x="260" dy="22">Size Specifications and Stock</tspan></text>
+<polygon class="node" points="150,778 400,778 370,852 120,852"/>
+<text text-anchor="middle" x="260" y="810"><tspan x="260" dy="0">Upload Image and</tspan><tspan x="260" dy="22">Optional 3D Models</tspan></text>
+<rect class="node" x="130" y="908" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="260" y="951"><tspan x="260" dy="0">Validate and Save Changes</tspan></text>
+<circle class="node" cx="260" cy="1080" r="22"/>
+<text text-anchor="middle" x="260" y="1086"><tspan x="260" dy="0">A</tspan></text>
+<path class="edge" d="M260,177 V228"/>
+<path class="edge" d="M260,302 V342"/>
+<path class="edge" d="M260,458 V518"/>
+<text class="label" x="270" y="488">Yes</text>
+<path class="edge" d="M260,592 V648"/>
+<path class="edge" d="M260,722 V778"/>
+<path class="edge" d="M260,852 V908"/>
+<path class="edge" d="M260,982 V1058"/>
+<path class="edge" d="M170,400 H65 V1020 H260 V1058"/>
+<text class="label" x="80" y="425">No</text>
+<circle class="node" cx="750" cy="140" r="22"/>
+<text text-anchor="middle" x="750" y="146"><tspan x="750" dy="0">A</tspan></text>
+<rect class="node" x="620" y="228" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="750" y="271"><tspan x="750" dy="0">Open Order Management</tspan></text>
+<polygon class="node" points="640,358 890,358 860,432 610,432"/>
+<text text-anchor="middle" x="750" y="401"><tspan x="750" dy="0">Display Orders</tspan></text>
+<rect class="node" x="620" y="488" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="750" y="531"><tspan x="750" dy="0">Select and Review Order</tspan></text>
+<polygon class="node" points="750,612 840,670 750,728 660,670"/>
+<text text-anchor="middle" x="750" y="665"><tspan x="750" dy="0">Cancel</tspan><tspan x="750" dy="22">Order?</tspan></text>
+<polygon class="node" points="640,813 890,813 860,887 610,887"/>
+<text text-anchor="middle" x="750" y="856"><tspan x="750" dy="0">Select Fulfillment Status</tspan></text>
+<rect class="node" x="620" y="953" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="750" y="996"><tspan x="750" dy="0">Save Order Status</tspan></text>
+<circle class="node" cx="750" cy="1120" r="22"/>
+<text text-anchor="middle" x="750" y="1126"><tspan x="750" dy="0">B</tspan></text>
+<path class="edge" d="M750,162 V228"/>
+<path class="edge" d="M750,302 V358"/>
+<path class="edge" d="M750,432 V488"/>
+<path class="edge" d="M750,562 V612"/>
+<path class="edge" d="M750,728 V813"/>
+<text class="label" x="760" y="770.5">No</text>
+<path class="edge" d="M750,887 V953"/>
+<path class="edge" d="M750,1027 V1098"/>
+<path class="edge" d="M660,670 H490 V745"/>
+<text class="label" x="525" y="653">Yes</text>
+<polygon class="node" points="415,745 585,745 565,810 395,810"/><text text-anchor="middle" x="490" y="774"><tspan x="490">Enter cancellation</tspan><tspan x="490" dy="22">reason</tspan></text><path class="edge" d="M490,810 V850"/><rect class="node" x="400" y="850" width="180" height="100"/><text text-anchor="middle" x="490" y="878"><tspan x="490">Cancel order</tspan><tspan x="490" dy="22">and restore</tspan><tspan x="490" dy="22">stock once</tspan></text>
+<path class="edge" d="M490,950 V1050 H750 V1098"/>
+<circle class="node" cx="1240" cy="140" r="22"/>
+<text text-anchor="middle" x="1240" y="146"><tspan x="1240" dy="0">B</tspan></text>
+<polygon class="node" points="1240,227 1330,285 1240,343 1150,285"/>
+<text text-anchor="middle" x="1240" y="280"><tspan x="1240" dy="0">COD Collection</tspan><tspan x="1240" dy="22">Confirmed?</tspan></text>
+<rect class="node" x="1110" y="413" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="1240" y="456"><tspan x="1240" dy="0">Record Payment as Paid</tspan></text>
+<polygon class="node" points="1130,563 1380,563 1350,637 1100,637"/>
+<text text-anchor="middle" x="1240" y="595"><tspan x="1240" dy="0">Display Updated Order</tspan><tspan x="1240" dy="22">and Payment Status</tspan></text>
+<polygon class="node" points="1240,702 1330,760 1240,818 1150,760"/>
+<text text-anchor="middle" x="1240" y="755"><tspan x="1240" dy="0">Manage Another</tspan><tspan x="1240" dy="22">Order?</tspan></text>
+<rect class="node" x="1110" y="923" width="260" height="74" rx="0"/>
+<text text-anchor="middle" x="1240" y="966"><tspan x="1240" dy="0">Log Out</tspan></text>
+<rect class="node" x="1110" y="1083" width="260" height="74" rx="37"/>
+<text text-anchor="middle" x="1240" y="1126"><tspan x="1240" dy="0">End</tspan></text>
+<path class="edge" d="M1240,162 V227"/>
+<path class="edge" d="M1240,343 V413"/>
+<text class="label" x="1250" y="378">Yes</text>
+<path class="edge" d="M1240,487 V563"/>
+<path class="edge" d="M1330,285 H1445 V530 H1240 V563"/>
+<text class="label" x="1370" y="270">No</text>
+<path class="edge" d="M1240,637 V702"/>
+<path class="edge" d="M1240,818 V923"/>
+<text class="label" x="1250" y="870.5">No</text>
+<path class="edge" d="M1240,997 V1083"/>
+<path class="edge" d="M1150,760 H1055 V880"/>
+<text class="label" x="1080" y="745">Yes</text>
+<circle class="node" cx="1055" cy="902" r="22"/>
+<text text-anchor="middle" x="1055" y="908"><tspan x="1055" dy="0">A</tspan></text>
+<text x="60" y="1210" style="font-size:16px">Fulfillment statuses: Pending → Confirmed → Processing → Shipped → Delivered.</text><text x="60" y="1242" style="font-size:16px">Update status as fulfillment progresses. Record COD as paid only after collection is confirmed.</text><text x="60" y="1274" style="font-size:16px">Matching A / B circles connect the flow. Cancellation review requests and refund workflows are future additions.</text></svg>
+

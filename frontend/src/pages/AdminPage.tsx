@@ -19,6 +19,8 @@ type Draft = Pick<
   | "sizeSpecs"
 >;
 type QueuedModel = { id: string; breed: string; file: File | null };
+const MAX_GLB_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_GLB_FILE_SIZE_LABEL = "10 MB";
 
 const emptyDraft = (): Draft => ({
   name: "",
@@ -835,6 +837,10 @@ function QueuedModelsSection({
           !entry.file.name.toLowerCase().endsWith(".glb")
         )
           throw new Error("A breed and .glb file are required");
+        if (entry.file.size > MAX_GLB_FILE_SIZE_BYTES)
+          throw new Error(
+            `This Cloudinary account currently allows GLB files up to ${MAX_GLB_FILE_SIZE_LABEL}.`,
+          );
         updated = await productsApi.uploadModel(
           updated.id,
           entry.breed.trim(),
@@ -962,6 +968,10 @@ function ModelUploadSection({
     if (!file) return setError("Choose a GLB file before uploading.");
     if (!file.name.toLowerCase().endsWith(".glb"))
       return setError("Only .glb files are allowed.");
+    if (file.size > MAX_GLB_FILE_SIZE_BYTES)
+      return setError(
+        `This Cloudinary account currently allows GLB files up to ${MAX_GLB_FILE_SIZE_LABEL}.`,
+      );
     setBusyBreed(breed);
     setError("");
     setSuccess("");
@@ -1005,7 +1015,7 @@ function ModelUploadSection({
     <section className="border-t border-border pt-5">
       <h3 className="font-bold text-foreground">3D Models</h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Upload one complete GLB model for each breed, up to 80 MB. The model
+        Upload one complete GLB model for each breed, up to 10 MB. The model
         should already contain the dog wearing this product.
       </p>
       {error && <p aria-live="polite" className="mt-3 text-sm text-destructive">{error}</p>}
@@ -1178,8 +1188,14 @@ const paymentStatuses: Order["paymentStatus"][] = [
   "pending",
   "paid",
   "failed",
-  "refunded",
 ];
+
+function formatOrderStatus(status: string) {
+  return status
+    .split("_")
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
 
 function AdminOrders() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -1212,6 +1228,7 @@ function AdminOrders() {
     order: AdminOrder,
     status: Order["status"],
     paymentStatus: Order["paymentStatus"],
+    cancellationReason?: string,
   ) => {
     setSaving(order.id);
     setError("");
@@ -1220,6 +1237,7 @@ function AdminOrders() {
         order.id,
         status,
         paymentStatus,
+        cancellationReason,
       );
       setOrders((current) =>
         current.map((item) =>
@@ -1268,7 +1286,7 @@ function AdminOrders() {
               <option value="all">All orders</option>
               {statuses.map((status) => (
                 <option key={status} value={status}>
-                  {status[0].toUpperCase() + status.slice(1)}
+                  {formatOrderStatus(status)}
                 </option>
               ))}
             </select>
@@ -1294,7 +1312,7 @@ function AdminOrders() {
                 className={`border px-3 py-2 text-left text-xs font-semibold ${filter === status ? "border-primary bg-secondary text-primary" : "border-border text-muted-foreground"}`}
               >
                 <span className="block text-lg font-bold text-foreground">{count}</span>
-                {status[0].toUpperCase() + status.slice(1)}
+                {formatOrderStatus(status)}
               </button>
             );
           })}
@@ -1315,7 +1333,7 @@ function AdminOrders() {
             {orderGroups.map((group) => (
               <section key={group.status}>
                 <div className="mb-3 flex items-center justify-between border-b border-border pb-2">
-                  <h3 className="font-bold text-foreground">{group.status[0].toUpperCase() + group.status.slice(1)} orders</h3>
+                  <h3 className="font-bold text-foreground">{formatOrderStatus(group.status)} orders</h3>
                   <span className="text-xs font-semibold text-muted-foreground">{group.orders.length}</span>
                 </div>
                 <div className="space-y-4">
@@ -1351,24 +1369,35 @@ function AdminOrders() {
                     </p>
                   ))}
                 </div>
+                {order.status === "cancelled" && order.cancellationReason && (
+                  <p className="mt-4 border-l-2 border-border pl-3 text-sm text-muted-foreground">
+                    Cancelled by {order.cancelledBy || "admin"}: {order.cancellationReason}
+                  </p>
+                )}
                 <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
                     Order status
                     <select
                       disabled={saving === order.id}
                       value={order.status}
-                      onChange={(event) =>
-                        void update(
-                          order,
-                          event.target.value as Order["status"],
-                          order.paymentStatus,
-                        )
-                      }
+                      onChange={(event) => {
+                        const nextStatus = event.target.value as Order["status"];
+                        if (nextStatus === "cancelled" && order.status !== "cancelled") {
+                          const reason = window.prompt("Enter the cancellation reason for the customer.");
+                          if (!reason?.trim()) {
+                            setError("A cancellation reason is required.");
+                            return;
+                          }
+                          void update(order, nextStatus, order.paymentStatus, reason.trim());
+                          return;
+                        }
+                        void update(order, nextStatus, order.paymentStatus);
+                      }}
                       className="input"
                     >
                       {statuses.map((status) => (
                         <option key={status} value={status}>
-                          {status[0].toUpperCase() + status.slice(1)}
+                          {formatOrderStatus(status)}
                         </option>
                       ))}
                     </select>
@@ -1389,7 +1418,7 @@ function AdminOrders() {
                     >
                       {paymentStatuses.map((status) => (
                         <option key={status} value={status}>
-                          {status[0].toUpperCase() + status.slice(1)}
+                          {formatOrderStatus(status)}
                         </option>
                       ))}
                     </select>

@@ -43,9 +43,8 @@ function reserveSizeStock(product, size, quantity) {
 export async function createOrder(req, res, next) {
   const session = await mongoose.startSession();
   try {
-    const { paymentMethod, paymentReference } = req.body;
-    if (!["cod", "gcash", "maya"].includes(paymentMethod)) return res.status(400).json({ message: "A valid payment method is required" });
-    if (["gcash", "maya"].includes(paymentMethod) && !String(paymentReference || "").trim()) return res.status(400).json({ message: "A payment reference is required for GCash or Maya" });
+    if (req.body.paymentMethod !== "cod")
+      return res.status(400).json({ message: "Cash on Delivery is the only available payment method" });
     const deliveryAddress = addressFrom(req.body);
     let createdOrder;
     await session.withTransaction(async () => {
@@ -64,8 +63,7 @@ export async function createOrder(req, res, next) {
       }
       const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       [createdOrder] = await Order.create([{
-        orderNumber: orderNumber(), user: req.user._id, items, deliveryAddress, paymentMethod,
-        paymentReference: paymentMethod === "cod" ? undefined : String(paymentReference).trim(),
+        orderNumber: orderNumber(), user: req.user._id, items, deliveryAddress, paymentMethod: "cod",
         subtotal, shippingFee, total: subtotal + shippingFee,
       }], { session });
       cart.items = [];
@@ -106,6 +104,13 @@ async function restoreInventory(order, session) {
   order.inventoryRestored = true;
 }
 
+function applyCancellation(order, { by, reason }) {
+  order.status = "cancelled";
+  order.cancelledBy = by;
+  order.cancellationReason = reason;
+  order.cancelledAt = new Date();
+}
+
 export async function cancelMyOrder(req, res, next) {
   const session = await mongoose.startSession();
   try {
@@ -113,8 +118,15 @@ export async function cancelMyOrder(req, res, next) {
     await session.withTransaction(async () => {
       order = await Order.findOne({ _id: req.params.id, user: req.user._id }).session(session);
       if (!order) throw Object.assign(new Error("Order not found"), { statusCode: 404 });
-      if (order.status !== "pending") throw Object.assign(new Error("Only pending orders can be cancelled"), { statusCode: 409 });
-      order.status = "cancelled";
+      if (!["pending", "confirmed"].includes(order.status))
+        throw Object.assign(
+          new Error("Only pending or confirmed orders can be cancelled before shipment"),
+          { statusCode: 409 },
+        );
+      applyCancellation(order, {
+        by: "customer",
+        reason: "Cancelled by customer before shipment",
+      });
       await restoreInventory(order, session);
       await order.save({ session });
     });
@@ -142,9 +154,18 @@ export async function updateOrderStatus(req, res, next) {
       order = await Order.findById(req.params.id).session(session);
       if (!order) throw Object.assign(new Error("Order not found"), { statusCode: 404 });
       if (order.status === "cancelled" && status !== "cancelled") throw Object.assign(new Error("Cancelled orders cannot be reopened"), { statusCode: 409 });
-      order.status = status;
-      if (paymentStatus && ["pending", "paid", "failed", "refunded"].includes(paymentStatus)) order.paymentStatus = paymentStatus;
-      if (status === "cancelled") await restoreInventory(order, session);
+      if (status === "cancelled" && order.status !== "cancelled") {
+        const cancellationReason = String(req.body.cancellationReason || "").trim();
+        if (!cancellationReason)
+          throw Object.assign(new Error("A cancellation reason is required"), {
+            statusCode: 400,
+          });
+        applyCancellation(order, { by: "admin", reason: cancellationReason });
+        await restoreInventory(order, session);
+      } else {
+        order.status = status;
+        if (paymentStatus && ["pending", "paid", "failed", "refunded"].includes(paymentStatus)) order.paymentStatus = paymentStatus;
+      }
       await order.save({ session });
     });
     res.json({ order: serialiseOrder(order) });

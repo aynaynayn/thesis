@@ -12,7 +12,8 @@ export function errorHandler(error, _req, res, _next) {
   });
   if (error.code === "LIMIT_FILE_SIZE") {
     return res.status(413).json({
-      message: "The GLB file is too large. Maximum upload size is 80 MB.",
+      message:
+        "The GLB file is too large. This Cloudinary account currently allows GLB files up to 10 MB.",
     });
   }
   const statusCode =

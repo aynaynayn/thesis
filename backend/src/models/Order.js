@@ -35,6 +35,8 @@ const orderSchema = new mongoose.Schema({
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
   items: { type: [itemSchema], required: true, validate: [(items) => items.length > 0, "An order needs at least one item"] },
   deliveryAddress: { type: addressSchema, required: true },
+  // GCash and Maya remain here only so historical orders can still be read.
+  // New checkout orders are cash on delivery only.
   paymentMethod: { type: String, enum: ["cod", "gcash", "maya"], required: true },
   paymentReference: { type: String, trim: true, maxlength: 100 },
   paymentStatus: { type: String, enum: ["pending", "paid", "failed", "refunded"], default: "pending" },
@@ -43,6 +45,9 @@ const orderSchema = new mongoose.Schema({
   shippingFee: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
   inventoryRestored: { type: Boolean, default: false },
+  cancellationReason: { type: String, trim: true, maxlength: 500 },
+  cancelledBy: { type: String, enum: ["customer", "admin"] },
+  cancelledAt: { type: Date },
 }, { timestamps: true });
 
 export default mongoose.model("Order", orderSchema);

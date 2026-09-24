@@ -5,13 +5,10 @@ import { useRouter } from "../context/RouterContext";
 import { useAuth } from "../context/AuthContext";
 import { ordersApi, type Order } from "../lib/api";
 
-type PaymentMethod = "gcash" | "maya" | "cod";
-
 export default function CheckoutPage() {
   const { items, total, clearCart } = useCart();
   const { user } = useAuth();
   const { navigate } = useRouter();
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cod");
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState("");
   const [placing, setPlacing] = useState(false);
@@ -25,7 +22,6 @@ export default function CheckoutPage() {
     city: "",
     province: "",
     postalCode: "",
-    reference: "",
   });
   useEffect(() => {
     if (user)
@@ -45,8 +41,7 @@ export default function CheckoutPage() {
     form.phone &&
     form.line1 &&
     form.city &&
-    form.province &&
-    (paymentMethod === "cod" || form.reference),
+    form.province,
   );
   const placeOrder = async () => {
     if (!user) {
@@ -55,7 +50,7 @@ export default function CheckoutPage() {
     }
     if (!valid) {
       setError(
-        "Complete delivery information and payment reference are required.",
+        "Complete the delivery information to place your order.",
       );
       return;
     }
@@ -64,8 +59,7 @@ export default function CheckoutPage() {
     try {
       const result = await ordersApi.create({
         deliveryAddress: form,
-        paymentMethod,
-        paymentReference: paymentMethod === "cod" ? undefined : form.reference,
+        paymentMethod: "cod",
       });
       setOrder(result.order);
       await clearCart();
@@ -112,13 +106,7 @@ export default function CheckoutPage() {
           <Row label="Items" value={String(order.items.length)} />
           <Row
             label="Payment"
-            value={
-              paymentMethod === "cod"
-                ? "Cash on Delivery"
-                : paymentMethod === "gcash"
-                  ? "GCash"
-                  : "Maya"
-            }
+            value="Cash on Delivery"
           />
           <Row label="Total" value={`₱${order.total.toLocaleString()}`} />
         </div>
@@ -219,30 +207,9 @@ export default function CheckoutPage() {
           <h2 className="mt-8 font-bold text-lg text-foreground">
             Payment method
           </h2>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {(["cod", "gcash", "maya"] as PaymentMethod[]).map((method) => (
-              <button
-                key={method}
-                onClick={() => setPaymentMethod(method)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold ${paymentMethod === method ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}
-              >
-                {method === "cod"
-                  ? "Cash on Delivery"
-                  : method === "gcash"
-                    ? "GCash"
-                    : "Maya"}
-              </button>
-            ))}
-          </div>
-          {paymentMethod !== "cod" && (
-            <div className="mt-4">
-              <Field
-                label={`${paymentMethod === "gcash" ? "GCash" : "Maya"} payment reference`}
-                value={form.reference}
-                onChange={(value) => update("reference", value)}
-              />
-            </div>
-          )}
+          <p className="mt-3 border-l-2 border-primary bg-secondary px-4 py-3 text-sm text-primary">
+            Cash on Delivery. Pay the courier when your order arrives.
+          </p>
           {error && <p className="mt-5 text-sm text-destructive">{error}</p>}
           <button
             disabled={placing}

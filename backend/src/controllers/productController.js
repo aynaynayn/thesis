@@ -448,6 +448,14 @@ export async function uploadProductModel(req, res, next) {
       }),
     );
   } catch (error) {
+    if (
+      error.http_code === 400 &&
+      /file size too large/i.test(error.message || "")
+    ) {
+      error.statusCode = 413;
+      error.message =
+        "The GLB file is too large. This Cloudinary account currently allows GLB files up to 10 MB.";
+    }
     console.error("3D MODEL UPLOAD FAILED", {
       productId: req.params.id,
       message: error.message,
