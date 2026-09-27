@@ -198,6 +198,19 @@ export default function AuthPage() {
                 </button>
               </p>
 
+              <div className="mt-6 border-t border-border pt-5">
+                <p className="text-muted-foreground">
+                  Want to browse first?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("shop")}
+                  className="mt-2 text-primary font-semibold hover:underline"
+                >
+                  Browse products as guest
+                </button>
+              </div>
+
               <p className="mt-6 text-xs text-muted-foreground">
                 Admins can sign in using their administrator credentials.
               </p>
