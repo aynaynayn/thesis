@@ -22,6 +22,7 @@ const editableFields = [
   "sizeCharts",
   "sizeSpecs",
   "inventory",
+  "colorVariants",
 ];
 
 function slugify(value) {
@@ -30,6 +31,16 @@ function slugify(value) {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
+}
+
+async function canonicalCategory(category, omitId) {
+  const normalized = String(category || "").trim();
+  if (!normalized) return normalized;
+  const match = await Product.findOne({
+    category: { $regex: `^${normalized.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, $options: "i" },
+    ...(omitId ? { _id: { $ne: omitId } } : {}),
+  }).select("category");
+  return match?.category || normalized;
 }
 
 async function uniqueSlug(value, omitId) {
@@ -72,6 +83,11 @@ function validateInventory(inventory = []) {
         new Error("Inventory stock must be a non-negative whole number"),
         { statusCode: 400 },
       );
+    if (item.price !== undefined && (!Number.isFinite(Number(item.price)) || Number(item.price) < 0))
+      throw Object.assign(
+        new Error("Optional size prices must be non-negative numbers"),
+        { statusCode: 400 },
+      );
     if ((sizes.has(size) && !legacyBreed) || skus.has(sku))
       throw Object.assign(
         new Error("Inventory size and SKU values must be unique per product"),
@@ -82,6 +98,7 @@ function validateInventory(inventory = []) {
     if (legacyBreed) item.breed = legacyBreed;
     item.size = size;
     item.sku = sku;
+    if (item.price !== undefined) item.price = Number(item.price);
   }
 }
 
@@ -90,12 +107,43 @@ function deriveAvailableBreeds(data) {
     ...new Set([
       ...(data.models || []).map((model) => model.breed?.trim()),
       ...(data.sizeCharts || []).map((chart) => chart.breed?.trim()),
+      ...((data.colorVariants || []).flatMap((variant) => variant.models || [])).map((model) => model.breed?.trim()),
     ].filter(Boolean)),
   ];
 }
 
+function normalizeColorVariants(data) {
+  if (data.colorVariants === undefined) return;
+  if (!Array.isArray(data.colorVariants))
+    throw Object.assign(new Error("Color variants must be an array"), { statusCode: 400 });
+  const names = new Set();
+  for (const variant of data.colorVariants) {
+    variant.name = String(variant.name || "").trim();
+    variant.hex = String(variant.hex || "").trim();
+    if (!variant.name || !/^#[0-9a-f]{6}$/i.test(variant.hex))
+      throw Object.assign(new Error("Every color variant needs a name and six-digit hex value"), { statusCode: 400 });
+    if (names.has(variant.name.toLowerCase()))
+      throw Object.assign(new Error("Color variant names must be unique"), { statusCode: 400 });
+    names.add(variant.name.toLowerCase());
+    variant.models = Array.isArray(variant.models) ? variant.models : [];
+  }
+  // Keep older consumers working with the first colour's model set.
+  if (data.colorVariants.length) data.models = data.colorVariants[0].models;
+}
+
 function normalizeProductData(data) {
   validateInventory(data.inventory);
+  if (data.images !== undefined) {
+    if (!Array.isArray(data.images))
+      throw Object.assign(new Error("Product images must be an array"), { statusCode: 400 });
+    data.images = [...new Set(data.images.map((image) => String(image || "").trim()).filter(Boolean))];
+    if (data.images.length > 3)
+      throw Object.assign(new Error("A product can have up to 3 images"), { statusCode: 400 });
+  }
+  data.category = String(data.category || "").trim();
+  if (!data.category)
+    throw Object.assign(new Error("A product category is required"), { statusCode: 400 });
+  normalizeColorVariants(data);
   if (data.sizeCharts !== undefined && !Array.isArray(data.sizeCharts)) {
     throw Object.assign(new Error("Size charts must be an array"), {
       statusCode: 400,
@@ -222,6 +270,7 @@ export async function createProduct(req, res, next) {
         message: "Name, description, category, image, and price are required",
       });
     data.slug = await uniqueSlug(data.slug || data.name);
+    data.category = await canonicalCategory(data.category);
     normalizeProductData(data);
     uploadedImagePublicId = data.imageCloudinaryPublicId;
 
@@ -319,6 +368,8 @@ export async function updateProduct(req, res, next) {
         req.body.slug || product.name,
         product._id,
       );
+    if (req.body.category !== undefined)
+      product.category = await canonicalCategory(product.category, product._id);
     normalizeProductData(product);
     await product.save();
     res.json({ product });
@@ -368,6 +419,7 @@ export async function uploadProductModel(req, res, next) {
   let uploadedPublicId;
   try {
     const breed = req.body.breed?.trim();
+    const colorName = req.body.colorName?.trim();
     if (!breed)
       throw Object.assign(new Error("Breed is required"), { statusCode: 400 });
     if (!req.file)
@@ -397,28 +449,35 @@ export async function uploadProductModel(req, res, next) {
       breed,
       publicId: asset.public_id,
     });
-    const existingIndex = product.models.findIndex(
+    const variant = colorName
+      ? product.colorVariants.find((entry) => entry.name.toLowerCase() === colorName.toLowerCase())
+      : null;
+    if (colorName && !variant)
+      throw Object.assign(new Error("Color variant not found"), { statusCode: 400 });
+    const targetModels = variant ? variant.models : product.models;
+    const existingIndex = targetModels.findIndex(
       (model) => model.breed.toLowerCase() === breed.toLowerCase(),
     );
     const isReplacement = existingIndex !== -1;
     const previousPublicId =
       existingIndex === -1
         ? null
-        : product.models[existingIndex].cloudinaryPublicId;
+        : targetModels[existingIndex].cloudinaryPublicId;
 
     if (existingIndex === -1)
-      product.models.push({
+      targetModels.push({
         breed,
         modelPath: asset.secure_url,
         cloudinaryPublicId: asset.public_id,
       });
     else
-      product.models[existingIndex] = {
+      targetModels[existingIndex] = {
         breed,
         modelPath: asset.secure_url,
         cloudinaryPublicId: asset.public_id,
       };
 
+    if (variant && product.colorVariants[0]?._id?.equals(variant._id)) product.models = targetModels;
     product.availableBreeds = deriveAvailableBreeds(product);
     console.info("3D MODEL DATABASE SAVE START", {
       productId: req.params.id,
@@ -478,15 +537,26 @@ export async function uploadProductModel(req, res, next) {
 export async function deleteProductModel(req, res, next) {
   try {
     const breed = decodeURIComponent(req.params.breed).trim();
+    const colorName = String(req.query.colorName || "").trim();
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
-    const index = product.models.findIndex(
+    const variant = colorName
+      ? product.colorVariants.find(
+          (entry) => entry.name.toLowerCase() === colorName.toLowerCase(),
+        )
+      : null;
+    if (colorName && !variant)
+      return res.status(404).json({ message: "Color variant not found" });
+    const targetModels = variant ? variant.models : product.models;
+    const index = targetModels.findIndex(
       (model) => model.breed.toLowerCase() === breed.toLowerCase(),
     );
     if (index === -1)
       return res.status(404).json({ message: "3D model not found" });
 
-    const [model] = product.models.splice(index, 1);
+    const [model] = targetModels.splice(index, 1);
+    if (variant && product.colorVariants[0]?._id?.equals(variant._id))
+      product.models = targetModels;
     product.availableBreeds = deriveAvailableBreeds(product);
     await product.save();
     await deleteModelAsset(model.cloudinaryPublicId).catch(() => {});

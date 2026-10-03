@@ -22,6 +22,8 @@ function publicCart(cart) {
         id: item._id,
         product: item.product,
         petBreed: item.petBreed,
+        colorName: item.colorName,
+        colorHex: item.colorHex,
         size: item.size,
         quantity: item.quantity,
       })),
@@ -38,7 +40,7 @@ export async function getCurrentCart(req, res, next) {
 
 export async function addCartItem(req, res, next) {
   try {
-    const { productId, size, petBreed, quantity = 1 } = req.body;
+    const { productId, size, petBreed, colorName, quantity = 1 } = req.body;
     if (!productId || !size || !Number.isInteger(quantity) || quantity < 1 || quantity > 20)
       return res.status(400).json({ message: "Product, size, and a quantity from 1 to 20 are required" });
 
@@ -50,8 +52,12 @@ export async function addCartItem(req, res, next) {
 
     let cart = await Cart.findOne({ user: req.user._id });
     if (!cart) cart = await Cart.create({ user: req.user._id, items: [] });
+    const selectedVariant = product.colorVariants?.find((variant) => variant.name.toLowerCase() === String(colorName || "").trim().toLowerCase())
+      || product.colorVariants?.[0]
+      // Old products only have `models`; surface them as the default colour.
+      || { name: "Default", hex: "#C96D48" };
     const item = cart.items.find(
-      (entry) => String(entry.product) === String(productId) && entry.size === normalizedSize,
+      (entry) => String(entry.product) === String(productId) && entry.size === normalizedSize && (entry.colorName || "") === (selectedVariant?.name || ""),
     );
     const requestedQuantity = (item?.quantity || 0) + quantity;
     if (requestedQuantity > stock)
@@ -64,6 +70,8 @@ export async function addCartItem(req, res, next) {
       cart.items.push({
         product: productId,
         petBreed: String(petBreed || "").trim(),
+        colorName: selectedVariant?.name || "",
+        colorHex: selectedVariant?.hex || "",
         size: normalizedSize,
         quantity,
       });

@@ -11,7 +11,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { Environment, Html, OrbitControls, useGLTF } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Box3, type Object3D, Vector3 } from "three";
-import type { Product } from "../data/products";
+import { priceForSize, type Product } from "../data/products";
 import { productsApi, type PetProfile } from "../lib/api";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
@@ -28,21 +28,25 @@ export default function ProductPage({ productId }: { productId: string }) {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedPetId, setSelectedPetId] = useState("");
   const [selectedPreviewBreed, setSelectedPreviewBreed] = useState("");
+  const [selectedColorName, setSelectedColorName] = useState("");
   const [added, setAdded] = useState(false);
   const [activeTab, setActiveTab] = useState<PreviewTab>("images");
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     setProduct(null);
     setError("");
     setActiveTab("images");
+    setSelectedImageIndex(0);
     void productsApi
       .get(productId)
       .then((loadedProduct) => {
         setProduct(loadedProduct);
+        setSelectedColorName(loadedProduct.colorVariants[0]?.name || "");
         setSelectedPreviewBreed((current) =>
-          loadedProduct.models.some((model) => model.breed === current)
+          loadedProduct.colorVariants[0]?.models.some((model) => model.breed === current)
             ? current
-            : loadedProduct.models[0]?.breed || "",
+            : loadedProduct.colorVariants[0]?.models[0]?.breed || "",
         );
       })
       .catch((requestError: Error) => setError(requestError.message));
@@ -52,6 +56,7 @@ export default function ProductPage({ productId }: { productId: string }) {
   const sizes = useMemo(() => product ? [...new Set(product.inventory.map((item) => item.size))].map((size) => ({ size, stock: product.inventory.filter((item) => item.size === size).reduce((total, item) => total + item.stock, 0) })) : [], [product]);
   const recommendation = product && selectedPet ? recommendSize(selectedPet, product) : null;
   const recommendedAvailability = recommendation ? sizes.find((entry) => entry.size.trim().toUpperCase() === recommendation.size.trim().toUpperCase())?.stock || 0 : 0;
+  const sizeLocked = Boolean(recommendation?.size && recommendedAvailability > 0);
   useEffect(() => { if (recommendation?.size) setSelectedSize(recommendation.size); }, [recommendation?.size]);
   if (error) return <Empty message={error} back={() => navigate("shop")} />;
   if (!product)
@@ -62,10 +67,18 @@ export default function ProductPage({ productId }: { productId: string }) {
     );
 
   const selectedSizeAvailability = sizes.find((entry) => entry.size === selectedSize)?.stock || 0;
+  const selectedSizePrice = priceForSize(product, selectedSize);
+  const productImages = Array.from(new Set([product.image, ...product.images].filter(Boolean))).slice(0, 3);
   const canAdd = selectedSizeAvailability > 0;
-  const selectedModel = product.models.find(
-    (model) => model.breed === selectedPreviewBreed,
-  );
+  const selectedColor = product.colorVariants.find((variant) => variant.name === selectedColorName) || product.colorVariants[0];
+  const defaultColor = product.colorVariants[0];
+  const previewBreeds = [...new Set(product.colorVariants.flatMap((variant) => variant.models.map((model) => model.breed)).concat(product.models.map((model) => model.breed)))];
+  const selectedModel = selectedColor?.models.find((model) => model.breed === selectedPreviewBreed);
+  const fallbackModel = defaultColor?.models.find((model) => model.breed === selectedPreviewBreed) || product.models.find((model) => model.breed === selectedPreviewBreed);
+  const previewModel = selectedModel || fallbackModel;
+  const previewNote = selectedModel || !selectedColor
+    ? undefined
+    : `No ${selectedColor.name} 3D model is available for this breed. Showing the default colour reference.`;
   const add = async () => {
     if (!selectedSize || !canAdd) return;
     if (!user) {
@@ -73,7 +86,7 @@ export default function ProductPage({ productId }: { productId: string }) {
       return;
     }
     try {
-      await addItem(product, selectedSize, selectedPreviewBreed || undefined);
+      await addItem(product, selectedSize, selectedPreviewBreed || undefined, selectedColor?.name);
       setAdded(true);
       window.setTimeout(() => setAdded(false), 1800);
     } catch (requestError) {
@@ -110,15 +123,9 @@ export default function ProductPage({ productId }: { productId: string }) {
             </button>
           </div>
           {activeTab === "images" ? (
-            <div className="aspect-square rounded-3xl overflow-hidden bg-muted">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <div><div className="aspect-square rounded-3xl overflow-hidden bg-muted"><img src={productImages[selectedImageIndex] || product.image} alt={`${product.name} view ${selectedImageIndex + 1}`} className="w-full h-full object-cover" /></div>{productImages.length > 1 && <div className="mt-3 grid grid-cols-3 gap-2">{productImages.map((image, index) => <button key={image} type="button" onClick={() => setSelectedImageIndex(index)} className={`aspect-square overflow-hidden border-2 ${selectedImageIndex === index ? "border-accent" : "border-transparent"}`} aria-label={`Show product image ${index + 1}`}><img src={image} alt="" className="h-full w-full object-cover" /></button>)}</div>}</div>
           ) : (
-            <PreviewPanel selectedModelPath={selectedModel?.modelPath} />
+            <PreviewPanel selectedModelPath={previewModel?.modelPath} referenceNote={previewNote} />
           )}
         </div>
         <div className="flex flex-col gap-6">
@@ -130,7 +137,7 @@ export default function ProductPage({ productId }: { productId: string }) {
               {product.name}
             </h1>
             <p className="text-2xl font-bold text-primary mt-2">
-              ₱{product.price.toLocaleString()}
+              ₱{selectedSizePrice.toLocaleString()}
             </p>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
               {product.description}
@@ -142,12 +149,12 @@ export default function ProductPage({ productId }: { productId: string }) {
               <select
                 value={selectedPreviewBreed}
                 onChange={(event) => setSelectedPreviewBreed(event.target.value)}
-                disabled={!product.models.length}
+                disabled={!previewBreeds.length}
                 className="input"
               >
-                {!product.models.length && <option>No 3D models uploaded</option>}
-                {product.models.map((model) => (
-                  <option key={model.breed} value={model.breed}>{model.breed}</option>
+                {!previewBreeds.length && <option>No 3D models uploaded</option>}
+                {previewBreeds.map((breed) => (
+                  <option key={breed} value={breed}>{breed}</option>
                 ))}
               </select>
             </label>
@@ -168,6 +175,26 @@ export default function ProductPage({ productId }: { productId: string }) {
             )}
           </div>
           <div>
+            <p className="mb-2 text-sm font-bold text-foreground">Color</p>
+            <div className="flex flex-wrap gap-2">
+              {product.colorVariants.map((variant) => (
+                <button
+                  key={variant._id || variant.name}
+                  type="button"
+                  onClick={() => {
+                    setSelectedColorName(variant.name);
+                  }}
+                  title={`${variant.name} (${variant.hex})`}
+                  aria-label={`Select ${variant.name}, ${variant.hex}`}
+                  className={`flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition ${selectedColor?.name === variant.name ? "border-primary bg-secondary text-primary" : "border-border bg-card text-foreground hover:border-primary/60"}`}
+                >
+                  <span className="h-5 w-5 rounded-full border border-black/15" style={{ backgroundColor: variant.hex }} />
+                  {variant.name}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
             <p className="text-sm font-bold text-foreground mb-2">
               Select Size <span className="text-destructive">*</span>
             </p>
@@ -175,7 +202,9 @@ export default function ProductPage({ productId }: { productId: string }) {
               {sizes.map((variant) => (
                 <button
                   key={variant.size}
-                  disabled={variant.stock === 0}
+                  disabled={variant.stock === 0 || (sizeLocked && variant.size !== recommendation?.size)}
+                  aria-disabled={variant.stock === 0 || (sizeLocked && variant.size !== recommendation?.size)}
+                  title={sizeLocked && variant.size !== recommendation?.size ? `Recommended size for ${selectedPet?.name || "this pet"} is ${recommendation?.size}` : undefined}
                   onClick={() => setSelectedSize(variant.size)}
                   className={`w-14 h-12 rounded-xl text-sm font-bold border disabled:opacity-40 ${selectedSize === variant.size ? "bg-primary text-primary-foreground border-primary" : "border-border bg-card text-foreground"}`}
                 >
@@ -184,6 +213,7 @@ export default function ProductPage({ productId }: { productId: string }) {
               ))}
             </div>
             {recommendation ? <Recommendation recommendation={recommendation} petName={selectedPet?.name || "your pet"} available={recommendedAvailability > 0} /> : selectedPet ? <p className="mt-4 text-sm text-muted-foreground">No exact size match. Please review the size measurements.</p> : null}
+            {sizeLocked && <button type="button" onClick={() => setSelectedPetId("")} className="mt-3 text-sm font-semibold text-primary underline underline-offset-4">Choose another size</button>}
           </div>
           <p className="text-xs text-muted-foreground">
             {selectedSize ? selectedSizeAvailability > 0 ? `${selectedSizeAvailability} in stock` : "Currently unavailable" : "Select a size to see availability."}
@@ -216,7 +246,7 @@ function PreviewPanel({
   referenceNote?: string;
 }) {
   return (
-    <div className="relative aspect-square rounded-3xl overflow-hidden border border-border bg-muted">
+    <div className="relative aspect-square rounded-3xl overflow-hidden border border-border bg-preview-bg">
       <div className="h-full">
         {!selectedModelPath ? (
           <PreviewMessage message="3D reference model unavailable for this breed." />
@@ -226,7 +256,7 @@ function PreviewPanel({
               shadows
               camera={{ position: [0, 1.5, 4], fov: 45 }}
               gl={{ alpha: true, antialias: true }}
-              style={{ background: "transparent" }}
+              style={{ background: "var(--preview-bg)" }}
               onCreated={({ gl }) => {
                 gl.toneMappingExposure = 1.1;
               }}
@@ -251,7 +281,6 @@ function PreviewPanel({
 
               <Suspense fallback={<LoadingPreview />}>
                 <FittedModel
-                  key={selectedModelPath}
                   url={modelAssetUrl(selectedModelPath)}
                 />
               </Suspense>
@@ -270,17 +299,22 @@ function FittedModel({ url }: { url: string }) {
   const gltf = useGLTF(url);
   const scene = useMemo(() => gltf.scene.clone(true), [gltf.scene]);
 
+  const hasFramed = useRef(false);
   useEffect(() => {
     const box = new Box3().setFromObject(scene);
     const center = box.getCenter(new Vector3());
     const size = box.getSize(new Vector3());
     const distance = Math.max(size.x, size.y, size.z, 1) * 1.8;
     scene.position.sub(center);
-    camera.position.set(distance, distance * 0.55, distance);
+    const shouldFrame = !hasFramed.current;
+    if (shouldFrame) {
+      camera.position.set(distance, distance * 0.55, distance);
+      hasFramed.current = true;
+    }
     camera.near = 0.01;
     camera.far = distance * 20;
     camera.updateProjectionMatrix();
-    controls.current?.target.set(0, 0, 0);
+    if (shouldFrame) controls.current?.target.set(0, 0, 0);
     controls.current?.update();
     return () => {
       disposeScene(scene);

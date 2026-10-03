@@ -7,8 +7,13 @@ export const AUTH_TOKEN_STORAGE_KEY = "pawfit_auth_token";
 type ApiProduct = Omit<Product, "id" | "stock"> & { _id: string };
 
 function toProduct(product: ApiProduct): Product {
+  const colorVariants = product.colorVariants?.length
+    ? product.colorVariants
+    : [{ name: "Default", hex: "#C96D48", models: product.models || [] }];
   return {
     ...product,
+    colorVariants,
+    models: product.models?.length ? product.models : colorVariants[0].models,
     id: product._id,
     stock: product.inventory.reduce((total, item) => total + item.stock, 0),
   };
@@ -77,15 +82,17 @@ export const productsApi = {
     const data = await request<{ product: ApiProduct }>(`/products/${id}/inventory`, { method: "PATCH", body: JSON.stringify(body) });
     return toProduct(data.product);
   },
-  async uploadModel(id: string, breed: string, file: File) {
+  async uploadModel(id: string, breed: string, file: File, colorName?: string) {
     const formData = new FormData();
     formData.append("breed", breed);
     formData.append("model", file);
+    if (colorName) formData.append("colorName", colorName);
     const data = await request<{ product: ApiProduct }>(`/products/${id}/models`, { method: "POST", body: formData });
     return toProduct(data.product);
   },
-  async deleteModel(id: string, breed: string) {
-    const data = await request<{ product: ApiProduct }>(`/products/${id}/models/${encodeURIComponent(breed)}`, { method: "DELETE" });
+  async deleteModel(id: string, breed: string, colorName?: string) {
+    const query = colorName ? `?colorName=${encodeURIComponent(colorName)}` : "";
+    const data = await request<{ product: ApiProduct }>(`/products/${id}/models/${encodeURIComponent(breed)}${query}`, { method: "DELETE" });
     return toProduct(data.product);
   },
   async uploadImage(id: string, file: File) {
@@ -102,19 +109,19 @@ export const productsApi = {
   remove: (id: string) => request<void>(`/products/${id}`, { method: "DELETE" }),
 };
 
-export type CartItem = { id: string; product: Product; petBreed?: string; size: string; quantity: number };
-type ApiCartItem = { id: string; _id?: string; product: ApiProduct; petBreed?: string; size: string; quantity: number };
-function toCartItems(items: ApiCartItem[]): CartItem[] { return items.map((item) => ({ id: item.id || item._id || "", product: toProduct(item.product), petBreed: item.petBreed, size: item.size, quantity: item.quantity })); }
+export type CartItem = { id: string; product: Product; petBreed?: string; colorName?: string; colorHex?: string; size: string; quantity: number };
+type ApiCartItem = { id: string; _id?: string; product: ApiProduct; petBreed?: string; colorName?: string; colorHex?: string; size: string; quantity: number };
+function toCartItems(items: ApiCartItem[]): CartItem[] { return items.map((item) => ({ id: item.id || item._id || "", product: toProduct(item.product), petBreed: item.petBreed, colorName: item.colorName, colorHex: item.colorHex, size: item.size, quantity: item.quantity })); }
 
 export const cartApi = {
   async get() { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart"); return toCartItems(data.cart.items); },
-  async add(productId: string, size: string, petBreed?: string, quantity = 1) { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart/items", { method: "POST", body: JSON.stringify({ productId, size, petBreed, quantity }) }); return toCartItems(data.cart.items); },
+  async add(productId: string, size: string, petBreed?: string, colorName?: string, quantity = 1) { const data = await request<{ cart: { items: ApiCartItem[] } }>("/cart/items", { method: "POST", body: JSON.stringify({ productId, size, petBreed, colorName, quantity }) }); return toCartItems(data.cart.items); },
   async update(itemId: string, quantity: number) { const data = await request<{ cart: { items: ApiCartItem[] } }>(`/cart/items/${itemId}`, { method: "PATCH", body: JSON.stringify({ quantity }) }); return toCartItems(data.cart.items); },
   async remove(itemId: string) { const data = await request<{ cart: { items: ApiCartItem[] } }>(`/cart/items/${itemId}`, { method: "DELETE" }); return toCartItems(data.cart.items); },
   clear: () => request<void>("/cart", { method: "DELETE" }),
 };
 
-export type Order = { id: string; _id: string; orderNumber: string; items: { product: string; name: string; image: string; breed?: string; size: string; sku: string; quantity: number; unitPrice: number }[]; deliveryAddress: { firstName: string; lastName: string; email: string; phone: string; line1: string; barangay?: string; city: string; province: string; postalCode?: string }; paymentMethod: "cod" | "gcash" | "maya"; paymentReference?: string; paymentStatus: "pending" | "paid" | "failed" | "refunded"; status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"; cancellationReason?: string; cancelledBy?: "customer" | "admin"; cancelledAt?: string; subtotal: number; shippingFee: number; total: number; createdAt: string };
+export type Order = { id: string; _id: string; orderNumber: string; items: { product: string; name: string; image: string; breed?: string; colorName?: string; colorHex?: string; size: string; sku: string; quantity: number; unitPrice: number }[]; deliveryAddress: { firstName: string; lastName: string; email: string; phone: string; line1: string; barangay?: string; city: string; province: string; postalCode?: string }; paymentMethod: "cod" | "gcash" | "maya"; paymentReference?: string; paymentStatus: "pending" | "paid" | "failed" | "refunded"; status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled"; cancellationReason?: string; cancelledBy?: "customer" | "admin"; cancelledAt?: string; subtotal: number; shippingFee: number; total: number; createdAt: string };
 export const ordersApi = {
   create: (body: { deliveryAddress: Order["deliveryAddress"]; paymentMethod: "cod" }) => request<{ order: Order }>("/orders", { method: "POST", body: JSON.stringify(body) }),
   mine: () => request<{ orders: Order[] }>("/orders"),

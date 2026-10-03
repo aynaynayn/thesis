@@ -12,6 +12,7 @@ export type InventoryItem = {
   sku: string;
   stock: number;
   lowStockThreshold: number;
+  price?: number;
 };
 
 export type ProductModel = {
@@ -19,6 +20,7 @@ export type ProductModel = {
   modelPath: string;
   cloudinaryPublicId?: string;
 };
+export type ColorVariant = { _id?: string; name: string; hex: string; models: ProductModel[] };
 
 export type Product = {
   id: string;
@@ -34,8 +36,14 @@ export type Product = {
   sizeCharts: SizeChart[];
   sizeSpecs: SizeSpec[];
   models: ProductModel[];
+  colorVariants: ColorVariant[];
   inventory: InventoryItem[];
   stock: number;
   featured: boolean;
   isActive: boolean;
 };
+
+export function priceForSize(product: Product, size?: string | null) {
+  const override = product.inventory.find((item) => item.size === size)?.price;
+  return typeof override === "number" ? override : product.price;
+}

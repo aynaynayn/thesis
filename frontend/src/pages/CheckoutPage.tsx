@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, CheckCircle } from "lucide-react";
 import { useCart } from "../context/CartContext";
+import { priceForSize } from "../data/products";
 import { useRouter } from "../context/RouterContext";
 import { useAuth } from "../context/AuthContext";
 import { ordersApi, type Order } from "../lib/api";
@@ -93,7 +94,7 @@ export default function CheckoutPage() {
   if (order)
     return (
       <main className="max-w-md mx-auto px-4 py-20 text-center">
-        <CheckCircle size={44} className="mx-auto text-green-600" />
+        <CheckCircle size={44} className="mx-auto text-success" />
         <h1 className="mt-5 text-2xl font-extrabold text-foreground">
           Order placed
         </h1>
@@ -278,11 +279,11 @@ function OrderSummary({
                 {item.product.name}
               </p>
               <p className="text-xs text-muted-foreground">
-                Size {item.size} · Qty {item.quantity}{item.breed ? ` · Previewed as ${item.breed}` : ""}
+                Size {item.size}{item.colorName ? ` · ${item.colorName}` : ""} · Qty {item.quantity}{item.petBreed ? ` · Previewed as ${item.petBreed}` : ""}
               </p>
             </div>
             <p className="text-sm font-bold">
-              ₱{(item.product.price * item.quantity).toLocaleString()}
+              ₱{(priceForSize(item.product, item.size) * item.quantity).toLocaleString()}
             </p>
           </div>
         ))}

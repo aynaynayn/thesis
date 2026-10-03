@@ -8,6 +8,7 @@ const inventorySchema = new mongoose.Schema(
     sku: { type: String, required: true, trim: true, uppercase: true },
     stock: { type: Number, required: true, min: 0, default: 0 },
     lowStockThreshold: { type: Number, min: 0, default: 3 },
+    price: { type: Number, min: 0 },
   },
   { _id: true },
 );
@@ -52,6 +53,15 @@ const modelSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const colorVariantSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true, trim: true, maxlength: 60 },
+    hex: { type: String, required: true, trim: true, match: /^#[0-9a-fA-F]{6}$/ },
+    models: { type: [modelSchema], default: [] },
+  },
+  { _id: true },
+);
+
 const productSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 160 },
@@ -92,6 +102,9 @@ const productSchema = new mongoose.Schema(
         message: "A product can only have one 3D model per breed",
       },
     },
+    // New catalog entries organize breed-specific assets by garment colour.
+    // `models` is retained so older documents and clients continue to work.
+    colorVariants: { type: [colorVariantSchema], default: [] },
     inventory: { type: [inventorySchema], default: [] },
   },
   { timestamps: true },

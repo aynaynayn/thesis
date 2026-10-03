@@ -7,6 +7,8 @@ const cartItemSchema = new mongoose.Schema(
     // solely by product and garment size.
     breed: { type: String, trim: true },
     petBreed: { type: String, trim: true, maxlength: 80 },
+    colorName: { type: String, trim: true, maxlength: 60 },
+    colorHex: { type: String, trim: true, maxlength: 7 },
     size: { type: String, required: true, trim: true, uppercase: true },
     quantity: { type: Number, required: true, min: 1, max: 20 },
   },

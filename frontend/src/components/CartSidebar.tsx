@@ -1,4 +1,5 @@
 import { useCart } from "../context/CartContext";
+import { priceForSize } from "../data/products";
 import { useRouter } from "../context/RouterContext";
 
 export default function CartSidebar() {
@@ -61,10 +62,10 @@ export default function CartSidebar() {
                       {item.product.name}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Size {item.size}{item.petBreed ? ` · Previewed as ${item.petBreed}` : ""}
+                      Size {item.size}{item.colorName ? ` · ${item.colorName}` : ""}{item.petBreed ? ` · Previewed as ${item.petBreed}` : ""}
                     </p>
                     <p className="text-sm font-bold text-primary mt-1">
-                      ₱{(item.product.price * item.quantity).toLocaleString()}
+                      ₱{(priceForSize(item.product, item.size) * item.quantity).toLocaleString()}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <button

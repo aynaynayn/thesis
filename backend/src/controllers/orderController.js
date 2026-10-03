@@ -59,7 +59,8 @@ export async function createOrder(req, res, next) {
         const allocations = reserveSizeStock(product, cartItem.size, cartItem.quantity);
         if (!allocations) throw Object.assign(new Error(`${product.name} no longer has enough stock`), { statusCode: 409 });
         await product.save({ session });
-        items.push({ product: product._id, name: product.name, image: product.image, breed: cartItem.petBreed, size: cartItem.size, sku: allocations[0].sku, inventoryAllocations: allocations, quantity: cartItem.quantity, unitPrice: product.price });
+        const pricedVariant = product.inventory.find((item) => item.sku === allocations[0].sku);
+        items.push({ product: product._id, name: product.name, image: product.image, breed: cartItem.petBreed, colorName: cartItem.colorName, colorHex: cartItem.colorHex, size: cartItem.size, sku: allocations[0].sku, inventoryAllocations: allocations, quantity: cartItem.quantity, unitPrice: pricedVariant?.price ?? product.price });
       }
       const subtotal = items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
       [createdOrder] = await Order.create([{
@@ -145,7 +146,7 @@ export async function listAdminOrders(req, res, next) {
 export async function updateOrderStatus(req, res, next) {
   const session = await mongoose.startSession();
   try {
-    const validStatuses = ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"];
+    const validStatuses = ["pending", "confirmed", "processing"];
     const { status, paymentStatus } = req.body;
     if (!validStatuses.includes(status)) return res.status(400).json({ message: "A valid order status is required" });
     if (paymentStatus !== undefined && !["pending", "paid", "failed", "refunded"].includes(paymentStatus)) return res.status(400).json({ message: "A valid payment status is required" });

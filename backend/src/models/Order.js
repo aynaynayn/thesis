@@ -19,6 +19,8 @@ const itemSchema = new mongoose.Schema({
   // Legacy orders retain their breed label. New orders may save the preview
   // breed as optional metadata, but it is not an inventory key.
   breed: { type: String },
+  colorName: { type: String },
+  colorHex: { type: String },
   size: { type: String, required: true },
   sku: { type: String, required: true },
   inventoryAllocations: {
@@ -40,7 +42,9 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: { type: String, enum: ["cod", "gcash", "maya"], required: true },
   paymentReference: { type: String, trim: true, maxlength: 100 },
   paymentStatus: { type: String, enum: ["pending", "paid", "failed", "refunded"], default: "pending" },
-  status: { type: String, enum: ["pending", "confirmed", "processing", "shipped", "delivered", "cancelled"], default: "pending", index: true },
+  // Logistics statuses remain readable on historical orders, but sellers may
+  // only set the workflow states below through the API.
+  status: { type: String, enum: ["pending", "confirmed", "processing", "cancelled"], default: "pending", index: true },
   subtotal: { type: Number, required: true, min: 0 },
   shippingFee: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },

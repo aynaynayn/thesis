@@ -28,6 +28,11 @@ export default function AuthPage() {
     setError("");
     setMessage("");
   };
+  const selectMode = (nextMode: Mode) => {
+    setMode(nextMode);
+    setError("");
+    setMessage("");
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -68,18 +73,19 @@ export default function AuthPage() {
         : "Reset your password";
 
   return (
-    <main className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
+    <main className="min-h-[80vh] bg-preview-bg px-4 py-10 sm:py-16">
+      <div className="mx-auto w-full max-w-lg">
         <button
           onClick={() => navigate("home")}
-          className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground mb-8"
+          className="mb-8 flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft size={16} />
           Back to Home
         </button>
 
-        <div className="bg-card rounded-3xl border border-border p-8">
-          <h1 className="text-2xl font-extrabold text-foreground text-center">
+        <div className="border border-border bg-card p-6 shadow-sm sm:p-9">
+          <p className="text-center text-xs font-bold uppercase tracking-[0.16em] text-accent">PawFit account</p>
+          <h1 className="mt-3 text-center text-3xl font-extrabold text-foreground">
             {title}
           </h1>
 
@@ -91,14 +97,19 @@ export default function AuthPage() {
                 : "Sign in to your PawFit account."}
           </p>
 
+          {mode !== "forgot" && <div className="mt-7 grid grid-cols-2 border border-border p-1">
+            <button type="button" onClick={() => selectMode("login")} className={`py-2 text-sm font-bold ${mode === "login" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Sign in</button>
+            <button type="button" onClick={() => selectMode("register")} className={`py-2 text-sm font-bold ${mode === "register" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Create account</button>
+          </div>}
+
           {message && (
-            <p className="mt-5 rounded-xl bg-green-50 p-3 text-sm text-green-800">
+            <p className="mt-5 rounded-lg bg-success/10 p-3 text-sm text-success">
               {message}
             </p>
           )}
 
           {error && (
-            <p className="mt-5 rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
+            <p className="mt-5 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </p>
           )}
@@ -167,7 +178,7 @@ export default function AuthPage() {
 
             <button
               disabled={submitting}
-              className="mt-2 w-full py-3 rounded-full bg-primary text-primary-foreground font-bold disabled:opacity-50"
+              className="mt-2 w-full rounded-lg bg-primary py-3 text-sm font-bold text-primary-foreground disabled:opacity-50"
             >
               {submitting
                 ? "Please wait..."
@@ -182,7 +193,7 @@ export default function AuthPage() {
           {mode === "login" && (
             <div className="mt-5 text-center text-sm">
               <button
-                onClick={() => setMode("forgot")}
+                onClick={() => selectMode("forgot")}
                 className="text-primary font-semibold hover:underline"
               >
                 Forgot password?
@@ -191,7 +202,7 @@ export default function AuthPage() {
               <p className="mt-4 text-muted-foreground">
                 New to PawFit?{" "}
                 <button
-                  onClick={() => setMode("register")}
+                onClick={() => selectMode("register")}
                   className="text-primary font-semibold hover:underline"
                 >
                   Create an account
@@ -210,17 +221,13 @@ export default function AuthPage() {
                   Browse products as guest
                 </button>
               </div>
-
-              <p className="mt-6 text-xs text-muted-foreground">
-                Admins can sign in using their administrator credentials.
-              </p>
             </div>
           )}
 
           {mode !== "login" && (
             <p className="mt-6 text-center text-sm text-muted-foreground">
               <button
-                onClick={() => setMode("login")}
+                onClick={() => selectMode("login")}
                 className="text-primary font-semibold hover:underline"
               >
                 Back to sign in

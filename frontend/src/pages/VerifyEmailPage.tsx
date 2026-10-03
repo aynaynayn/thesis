@@ -33,7 +33,7 @@ export default function VerifyEmailPage() {
         <CheckCircle
           size={42}
           className={
-            state.error ? "mx-auto text-destructive" : "mx-auto text-green-600"
+            state.error ? "mx-auto text-destructive" : "mx-auto text-success"
           }
         />
         <h1 className="mt-5 text-2xl font-extrabold text-foreground">

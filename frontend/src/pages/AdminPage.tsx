@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LogOut, Package, Plus, RefreshCw, Trash2, X } from "lucide-react";
+import { Box, LayoutDashboard, LogOut, Menu, Package, Plus, RefreshCw, ShoppingBag, Trash2, X } from "lucide-react";
 import { type InventoryItem, type Product } from "../data/products";
 import { ordersApi, productsApi, type Order } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
@@ -17,10 +17,12 @@ type Draft = Pick<
   | "inventory"
   | "sizeCharts"
   | "sizeSpecs"
+  | "colorVariants"
 >;
-type QueuedModel = { id: string; breed: string; file: File | null };
+type QueuedModel = { id: string; breed: string; colorName: string; file: File | null };
 const MAX_GLB_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 const MAX_GLB_FILE_SIZE_LABEL = "10 MB";
+const MAX_PRODUCT_IMAGES = 3;
 
 const emptyDraft = (): Draft => ({
   name: "",
@@ -33,10 +35,12 @@ const emptyDraft = (): Draft => ({
   inventory: [],
   sizeCharts: [],
   sizeSpecs: [],
+  colorVariants: [{ name: "Default", hex: "#C96D48", models: [] }],
 });
 const createQueueRow = (): QueuedModel => ({
   id: crypto.randomUUID(),
   breed: "",
+  colorName: "Default",
   file: null,
 });
 
@@ -47,6 +51,10 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [editing, setEditing] = useState<Product | null | undefined>(undefined);
+  const [adminView, setAdminView] = useState<"dashboard" | "products" | "add" | "orders" | "models">("dashboard");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [pendingOrderCount, setPendingOrderCount] = useState(0);
+  const [productCategoryFilter, setProductCategoryFilter] = useState("All");
   const load = async () => {
     try {
       setProducts(await productsApi.listAdmin());
@@ -62,6 +70,12 @@ export default function AdminPage() {
   };
   useEffect(() => {
     if (!loading && user?.role === "admin") void load();
+  }, [loading, user]);
+  useEffect(() => {
+    if (loading || user?.role !== "admin") return;
+    void ordersApi.admin().then(({ orders }) => {
+      setPendingOrderCount(orders.filter((order) => order.status === "pending").length);
+    }).catch(() => undefined);
   }, [loading, user]);
   if (loading)
     return (
@@ -105,26 +119,24 @@ export default function AdminPage() {
       );
     }
   };
+  const categoryOptions = [...new Map(["Shirts", "Coats", "Sweaters", "Hoodies", ...products.map((product) => product.category)].filter(Boolean).map((category) => [category.trim().toLowerCase(), category.trim()])).values()];
+  const productCategories = ["All", ...new Set(products.map((product) => product.category).filter(Boolean))];
+  const visibleProducts = productCategoryFilter === "All" ? products : products.filter((product) => product.category === productCategoryFilter);
+  const openEditor = (item?: Product) => { setEditing(item || null); setAdminView(item ? "products" : "add"); setMobileNavOpen(false); };
   return (
-    <main className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div>
-            <h1 className="font-extrabold text-foreground">
-              PawFit Administration
-            </h1>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-          </div>
-          <button
-            onClick={() => void logout().then(() => navigate("home"))}
-            className="flex items-center gap-2 text-sm font-semibold text-muted-foreground"
-          >
-            <LogOut size={16} /> Sign out
-          </button>
-        </div>
-      </header>
+    <main className="min-h-screen bg-admin-bg md:grid md:grid-cols-[15rem_1fr]">
+      <aside className={`${mobileNavOpen ? "block" : "hidden"} fixed inset-x-0 top-0 z-50 border-b border-border bg-card p-5 shadow-lg md:static md:block md:min-h-screen md:border-b-0 md:border-r`}>
+        <div className="flex items-center justify-between"><div><h1 className="font-extrabold text-foreground">PawFit Admin</h1><p className="text-xs text-muted-foreground">{user.email}</p></div><button className="md:hidden" onClick={() => setMobileNavOpen(false)} aria-label="Close menu"><X size={18} /></button></div>
+        <nav className="mt-7 grid gap-1">
+          {[["dashboard", "Dashboard", LayoutDashboard], ["products", "Products", Package], ["add", "Add Product", Plus], ["orders", "Orders", ShoppingBag], ["models", "3D Models", Box]].map(([view, label, Icon]) => { const AdminIcon = Icon as typeof Package; const isActive = adminView === view || (view === "add" && editing !== undefined); return <button key={String(view)} onClick={() => { setAdminView(view as typeof adminView); if (view === "add") openEditor(); else setMobileNavOpen(false); }} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}><AdminIcon size={17} /><span className="flex-1">{String(label)}</span>{view === "orders" && pendingOrderCount > 0 && <span className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] ${isActive ? "bg-surface text-primary" : "bg-accent text-white"}`}>{pendingOrderCount}</span>}</button>; })}
+        </nav>
+        <button onClick={() => void logout().then(() => navigate("home"))} className="mt-8 flex items-center gap-2 px-3 text-sm font-semibold text-muted-foreground"><LogOut size={16} /> Sign out</button>
+      </aside>
+      <div>
+      <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:hidden"><h1 className="font-bold text-foreground">PawFit Admin</h1><button onClick={() => setMobileNavOpen(true)} aria-label="Open admin menu"><Menu size={22} /></button></header>
       <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
-        <div className="flex items-center justify-between gap-4">
+        {adminView === "products" && <>
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-2xl font-extrabold text-foreground">
               Products and inventory
@@ -133,12 +145,7 @@ export default function AdminPage() {
               Create catalogue entries and maintain stock by garment size.
             </p>
           </div>
-          <button
-            onClick={() => setEditing(null)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground font-bold"
-          >
-            <Plus size={16} /> Add Product
-          </button>
+          <div className="flex flex-wrap items-end gap-3"><label className="grid gap-1 text-xs font-bold text-muted-foreground"><span>Category</span><select value={productCategoryFilter} onChange={(event) => setProductCategoryFilter(event.target.value)} className="h-10 min-w-36 border border-border bg-surface px-3 text-sm font-semibold text-foreground outline-none focus:border-accent">{productCategories.map((category) => <option key={category} value={category}>{category}</option>)}</select></label><button onClick={() => openEditor()} className="flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-bold text-primary-foreground"><Plus size={16} /> Add Product</button></div>
         </div>
         {error && (
           <p className="mt-5 rounded-xl bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -148,6 +155,8 @@ export default function AdminPage() {
         {loadingProducts ? (
           <p className="mt-10 text-muted-foreground">Loading products</p>
         ) : products.length ? (
+          <>
+          <p className="mt-6 text-sm text-muted-foreground">Showing {visibleProducts.length} of {products.length} products</p>
           <div className="mt-8 overflow-x-auto border border-border rounded-2xl">
             <table className="w-full text-sm">
               <thead className="bg-muted">
@@ -159,7 +168,7 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => (
+                {visibleProducts.map((product) => (
                   <tr key={product.id} className="border-t border-border">
                     <td className="p-3">
                       <p className="font-bold text-foreground">
@@ -187,7 +196,7 @@ export default function AdminPage() {
                     </td>
                     <td className="p-3 text-right">
                       <button
-                        onClick={() => setEditing(product)}
+                        onClick={() => openEditor(product)}
                         className="mr-3 text-primary font-semibold"
                       >
                         Edit
@@ -204,6 +213,8 @@ export default function AdminPage() {
               </tbody>
             </table>
           </div>
+          {visibleProducts.length === 0 && <p className="mt-5 text-sm text-muted-foreground">No products are in this category yet.</p>}
+          </>
         ) : (
           <div className="mt-8 border border-border rounded-2xl p-8 text-center">
             <Package className="mx-auto text-muted-foreground" />
@@ -212,45 +223,127 @@ export default function AdminPage() {
             </p>
           </div>
         )}
+        </>}
       </section>
-      <AdminOrders />
+      {adminView === "dashboard" && <AdminDashboard products={products} onShowOrders={() => setAdminView("orders")} onEditProduct={openEditor} />}
+      {adminView === "orders" && <CompactOrders onOrdersChanged={() => void ordersApi.admin().then(({ orders }) => setPendingOrderCount(orders.filter((order) => order.status === "pending").length)).catch(() => undefined)} />}
+      {adminView === "models" && <ModelsOverview products={products} onEditProduct={openEditor} />}
       {editing !== undefined && (
         <ProductEditor
           initial={editing || undefined}
           onClose={() => setEditing(undefined)}
           onProductSaved={load}
+          categoryOptions={categoryOptions}
         />
       )}
-    </main>
+      </div></main>
   );
+}
+
+function AdminDashboard({
+  products,
+  onShowOrders,
+  onEditProduct,
+}: {
+  products: Product[];
+  onShowOrders: () => void;
+  onEditProduct: (product?: Product) => void;
+}) {
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const loadOrders = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      setOrders((await ordersApi.admin()).orders as AdminOrder[]);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Unable to load order statistics.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => { void loadOrders(); }, []);
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const monthOrders = orders.filter((order) => new Date(order.createdAt) >= monthStart);
+  const paidRevenue = monthOrders.filter((order) => order.paymentStatus === "paid").reduce((sum, order) => sum + order.total, 0);
+  const lowStock = products.flatMap((product) => product.inventory.filter((item) => item.stock <= 3).map((item) => ({ product, item }))).slice(0, 5);
+  const pending = orders.filter((order) => order.status === "pending").length;
+  const statuses = ["pending", "confirmed", "processing", "shipped", "delivered"] as const;
+  const recentOrders = [...orders].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)).slice(0, 5);
+  const dailySales = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    const total = orders.filter((order) => order.paymentStatus === "paid" && new Date(order.createdAt).toDateString() === date.toDateString()).reduce((sum, order) => sum + order.total, 0);
+    return { label: date.toLocaleDateString(undefined, { weekday: "narrow" }), total };
+  });
+  const peakSales = Math.max(...dailySales.map((day) => day.total), 1);
+  const statCards = [
+    ["Needs action", pending, "Pending orders"],
+    ["This month", monthOrders.length, "Orders received"],
+    ["Paid revenue", `PHP ${paidRevenue.toLocaleString()}`, "Paid orders only"],
+    ["Active products", products.filter((product) => product.isActive).length, `${lowStock.length} low or out sizes`],
+  ];
+
+  return <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Seller overview</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Good morning, PawFit</h2><p className="mt-1 text-muted-foreground">Today’s orders, revenue, and inventory signals in one place.</p></div>
+      <div className="flex gap-2"><button onClick={() => void loadOrders()} className="rounded-lg border border-border bg-card p-2.5 text-muted-foreground" aria-label="Refresh dashboard" title="Refresh dashboard"><RefreshCw size={16} /></button><button onClick={onShowOrders} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"><ShoppingBag size={16} /> Review orders</button></div>
+    </div>
+    {error && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm text-danger"><span>Order statistics could not load: {error}</span><button onClick={() => void loadOrders()} className="font-bold underline">Try again</button></div>}
+    <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{statCards.map(([label, value, detail]) => <article key={String(label)} className="rounded-lg border border-border bg-card p-4"><p className="text-sm font-semibold text-muted-foreground">{label}</p><p className="mt-2 text-2xl font-extrabold text-foreground">{loading ? "-" : value}</p><p className="mt-1 text-xs text-muted-foreground">{detail}</p></article>)}</div>
+    <div className="mt-7 grid gap-5 lg:grid-cols-[1.35fr_0.9fr]">
+      <section className="rounded-lg border border-border bg-card p-5"><div className="flex items-center justify-between"><h3 className="font-bold text-foreground">Sales, last 7 days</h3><span className="text-xs text-muted-foreground">Paid orders</span></div>{orders.length ? <div className="mt-7 flex h-40 items-end gap-3">{dailySales.map((day) => <div key={day.label} className="flex flex-1 flex-col items-center gap-2"><span className="text-xs text-muted-foreground">{day.total ? `P${Math.round(day.total / 1000)}k` : ""}</span><div className="w-full rounded-t bg-accent" style={{ height: `${Math.max((day.total / peakSales) * 100, 4)}%` }} /><span className="text-xs text-muted-foreground">{day.label}</span></div>)}</div> : <p className="py-12 text-center text-sm text-muted-foreground">Sales data will appear after paid orders arrive.</p>}</section>
+      <section className="rounded-lg border border-border bg-card p-5"><h3 className="font-bold text-foreground">Order status</h3><div className="mt-4 grid grid-cols-2 gap-2">{statuses.map((status) => <button key={status} onClick={onShowOrders} className="border border-border p-3 text-left hover:border-accent"><span className="block text-lg font-bold text-foreground">{orders.filter((order) => order.status === status).length}</span><span className="text-xs text-muted-foreground">{formatOrderStatus(status)}</span></button>)}</div></section>
+    </div>
+    <div className="mt-7 grid gap-5 lg:grid-cols-2">
+      <section className="rounded-lg border border-border bg-card p-5"><div className="flex items-center justify-between"><h3 className="font-bold text-foreground">Recent orders</h3><button onClick={onShowOrders} className="text-sm font-bold text-accent">View all</button></div><div className="mt-4 divide-y divide-border">{recentOrders.length ? recentOrders.map((order) => <button key={order.id} onClick={onShowOrders} className="flex w-full items-center justify-between gap-4 py-3 text-left"><span><span className="block text-sm font-bold text-foreground">{order.orderNumber}</span><span className="text-xs text-muted-foreground">{order.user?.name || order.deliveryAddress.firstName}</span></span><span className="text-right"><span className="block text-sm font-bold text-foreground">P{order.total.toLocaleString()}</span><span className="text-xs text-muted-foreground">{formatOrderStatus(order.status)}</span></span></button>) : <p className="py-7 text-center text-sm text-muted-foreground">No orders yet.</p>}</div></section>
+      <section className="rounded-lg border border-border bg-card p-5"><div className="flex items-center justify-between"><h3 className="font-bold text-foreground">Low stock</h3><span className="text-xs text-muted-foreground">3 or fewer left</span></div><div className="mt-4 divide-y divide-border">{lowStock.length ? lowStock.map(({ product, item }) => <div key={`${product.id}-${item.size}`} className="flex items-center justify-between gap-3 py-3"><span><span className="block text-sm font-bold text-foreground">{product.name}</span><span className="text-xs text-muted-foreground">Size {item.size}</span></span><button onClick={() => onEditProduct(product)} className="text-sm font-bold text-accent">{item.stock} left · Edit</button></div>) : <p className="py-7 text-center text-sm text-muted-foreground">All listed sizes are comfortably stocked.</p>}</div></section>
+    </div>
+  </section>;
+}
+
+function ModelsOverview({ products, onEditProduct }: { products: Product[]; onEditProduct: (product: Product) => void }) {
+  const modelProducts = products.filter((product) => product.colorVariants.some((color) => color.models?.length));
+  return <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">3D fitting library</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">3D Models</h2><p className="mt-1 text-muted-foreground">Manage breed-specific garment previews by product color.</p></div><div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{modelProducts.length ? modelProducts.map((product) => { const count = product.colorVariants.reduce((sum, color) => sum + (color.models?.length || 0), 0); return <article key={product.id} className="rounded-lg border border-border bg-card p-4"><div className="flex h-28 items-center justify-center rounded bg-preview-bg"><Box className="text-muted-foreground" size={32} /></div><h3 className="mt-4 font-bold text-foreground">{product.name}</h3><p className="mt-1 text-sm text-muted-foreground">{count} model{count === 1 ? "" : "s"} across {product.colorVariants.length} color options</p><button onClick={() => onEditProduct(product)} className="mt-4 text-sm font-bold text-accent">Manage models</button></article>; }) : <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground sm:col-span-2 lg:col-span-3">No 3D models have been attached yet. Open a product to add a breed and color-specific GLB file.</div>}</div></section>;
 }
 
 function ProductEditor({
   initial,
   onClose,
   onProductSaved,
+  categoryOptions,
 }: {
   initial?: Product;
   onClose: () => void;
   onProductSaved: () => Promise<void>;
+  categoryOptions: string[];
 }) {
   const [product, setProduct] = useState<Product | null>(initial ?? null);
   const [draft, setDraft] = useState<Draft>(
     initial ? productDraft(initial) : emptyDraft(),
   );
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>(() => Array.from(new Set((initial?.images || []).filter((image) => image && image !== initial?.image))).slice(0, MAX_PRODUCT_IMAGES - 1));
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [queuedModels, setQueuedModels] = useState<QueuedModel[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [progress, setProgress] = useState("");
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState(0);
   const imagePreview = useObjectUrl(imageFile);
   const isNew = !product;
 
   const updateVariant = (
     index: number,
     key: keyof InventoryItem,
-    value: string | number,
+    value: string | number | undefined,
   ) =>
     setDraft((current) => ({
       ...current,
@@ -316,6 +409,22 @@ function ProductEditor({
     return null;
   };
 
+  const validateDraft = () => {
+    if (!draft.name.trim() || !draft.category.trim() || !draft.description.trim() || draft.price < 0) {
+      setStep(0);
+      return "Add a product name, category, description, and valid price before saving.";
+    }
+    return null;
+  };
+
+  const validateGalleryImages = () => {
+    if (galleryImages.length + galleryFiles.length > MAX_PRODUCT_IMAGES - 1)
+      return `A product can have up to ${MAX_PRODUCT_IMAGES} images, including its cover.`;
+    if (galleryFiles.some((file) => !["image/jpeg", "image/png", "image/webp"].includes(file.type)))
+      return "Additional product images must be JPEG, PNG, or WebP files.";
+    return null;
+  };
+
   const validateQueuedModels = () => {
     const breeds = new Set<string>();
     for (const entry of queuedModels) {
@@ -342,6 +451,7 @@ function ProductEditor({
           updatedProduct.id,
           entry.breed.trim(),
           entry.file as File,
+          entry.colorName,
         );
       } catch (uploadError) {
         failed.push(entry);
@@ -357,10 +467,12 @@ function ProductEditor({
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    const draftError = validateDraft();
     const imageError = validateImage();
+    const galleryError = validateGalleryImages();
     const modelError = validateQueuedModels();
-    if (imageError || modelError) {
-      setError(imageError || modelError || "");
+    if (draftError || imageError || galleryError || modelError) {
+      setError(draftError || imageError || galleryError || modelError || "");
       return;
     }
     setSaving(true);
@@ -370,25 +482,41 @@ function ProductEditor({
       let saved: Product;
       if (product) {
         setProgress("Saving product details...");
-        saved = await productsApi.update(product.id, draft);
+        saved = product;
+        if (imageFile) {
+          setProgress("Uploading product cover image...");
+          saved = await productsApi.uploadImage(saved.id, imageFile);
+          setImageFile(null);
+        }
+        setProgress("Uploading additional product images...");
+        const galleryUploads = await Promise.all(
+          galleryFiles.map((file) => productsApi.uploadPendingImage(file)),
+        );
+        const finalGallery = [
+          saved.image,
+          ...galleryImages,
+          ...galleryUploads.map((upload) => upload.imagePath),
+        ].slice(0, MAX_PRODUCT_IMAGES);
+        setProgress("Saving product details...");
+        saved = await productsApi.update(saved.id, { ...draft, images: finalGallery });
+        setGalleryImages(finalGallery.slice(1));
+        setGalleryFiles([]);
       } else {
         setProgress("Uploading product image...");
         const { imagePath, imageCloudinaryPublicId } =
           await productsApi.uploadPendingImage(imageFile as File);
+        const galleryUploads = await Promise.all(galleryFiles.map((file) => productsApi.uploadPendingImage(file)));
         setProgress("Creating product...");
         saved = await productsApi.create({
           ...draft,
           image: imagePath,
           imageCloudinaryPublicId,
+          images: [imagePath, ...galleryUploads.map((upload) => upload.imagePath)],
         });
         setImageFile(null);
+        setGalleryFiles([]);
       }
       setProduct(saved);
-      if (product && imageFile) {
-        setProgress("Uploading product image...");
-        saved = await productsApi.uploadImage(saved.id, imageFile);
-        setImageFile(null);
-      }
       const queuedCount = queuedModels.length;
       const modelUpload = queuedCount ? await uploadQueuedModels(saved) : null;
       if (modelUpload) saved = modelUpload.product;
@@ -426,16 +554,16 @@ function ProductEditor({
     <div className="fixed inset-0 z-50 bg-black/50 overflow-y-auto p-4">
       <form
         onSubmit={save}
+        noValidate
         className="admin-editor my-6 mx-auto max-w-3xl bg-card rounded-3xl border border-border"
       >
         <div className="flex items-center justify-between p-5 border-b border-border">
-          <h2 className="font-extrabold text-foreground">
-            {product ? "Edit Product" : "Add Product"}
-          </h2>
+          <div><h2 className="font-extrabold text-foreground">{product ? "Edit Product" : "Add Product"}</h2><p className="mt-0.5 text-xs text-muted-foreground">Step {step + 1} of 6</p></div>
           <button type="button" aria-label="Close" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
+        <div className="grid grid-cols-6 border-b border-border px-5 py-3">{["Basics", "Colors", "Inventory", "Sizing", "3D models", "Review"].map((label, index) => <button key={label} type="button" onClick={() => setStep(index)} className={`border-b-2 pb-2 text-[10px] font-bold uppercase tracking-[0.06em] sm:text-xs ${step === index ? "border-accent text-accent" : index < step ? "border-primary text-foreground" : "border-transparent text-muted-foreground"}`}>{label}</button>)}</div>
         <div className="p-4 grid gap-4">
           {error && (
             <p className="rounded-xl bg-destructive/10 p-3 text-sm text-destructive">
@@ -443,7 +571,7 @@ function ProductEditor({
             </p>
           )}
           {success && (
-            <p className="rounded-xl bg-green-50 p-3 text-sm text-green-800">
+            <p className="rounded-xl bg-success/10 p-3 text-sm text-success">
               {success}
             </p>
           )}
@@ -452,7 +580,7 @@ function ProductEditor({
               {progress}
             </p>
           )}
-          <section className="grid gap-4">
+          <section className={`grid gap-4 ${step === 0 ? "" : "hidden"}`}>
             <h3 className="font-bold text-foreground">Product Details</h3>
             <Label text="Product name">
               <input
@@ -466,14 +594,12 @@ function ProductEditor({
             </Label>
             <div className="grid sm:grid-cols-2 gap-4">
               <Label text="Category">
-                <input
-                  required
-                  value={draft.category}
-                  onChange={(event) =>
-                    setDraft({ ...draft, category: event.target.value })
-                  }
-                  className="input"
-                />
+                <select value={categoryOptions.some((option) => option.toLowerCase() === draft.category.toLowerCase()) ? draft.category : "other"} onChange={(event) => setDraft({ ...draft, category: event.target.value === "other" ? "" : event.target.value })} className="input">
+                  <option value="" disabled>Select a category</option>
+                  {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                  <option value="other">Other</option>
+                </select>
+                {!categoryOptions.some((option) => option.toLowerCase() === draft.category.toLowerCase()) && <input required value={draft.category} onChange={(event) => setDraft({ ...draft, category: event.target.value.trimStart() })} placeholder="Custom category" className="input" />}
               </Label>
               <Label text="Price">
                 <input
@@ -504,6 +630,14 @@ function ProductEditor({
               preview={currentImage}
               onChange={setImageFile}
             />
+            <GalleryPicker
+              existing={galleryImages}
+              files={galleryFiles}
+              remaining={MAX_PRODUCT_IMAGES - 1 - galleryImages.length - galleryFiles.length}
+              onAdd={(files) => setGalleryFiles((current) => [...current, ...files].slice(0, MAX_PRODUCT_IMAGES - 1 - galleryImages.length))}
+              onRemoveExisting={(image) => setGalleryImages((current) => current.filter((entry) => entry !== image))}
+              onRemoveFile={(file) => setGalleryFiles((current) => current.filter((entry) => entry !== file))}
+            />
             <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
               <input
                 type="checkbox"
@@ -515,7 +649,8 @@ function ProductEditor({
               Featured product
             </label>
           </section>
-          <section className="border-t border-border pt-5">
+          <div className={step === 1 ? "" : "hidden"}><ColorVariantsEditor variants={draft.colorVariants} onChange={(colorVariants) => setDraft({ ...draft, colorVariants })} /></div>
+          <section className={`border-t border-border pt-5 ${step === 2 ? "" : "hidden"}`}>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="font-bold text-foreground">
@@ -552,7 +687,7 @@ function ProductEditor({
               ))}
             </div>
           </section>
-          <section className="border-t border-border pt-5">
+          <section className={`border-t border-border pt-5 ${step === 3 ? "" : "hidden"}`}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="font-bold text-foreground">
@@ -573,10 +708,11 @@ function ProductEditor({
             </div>
             <SizeSpecEditor specs={draft.sizeSpecs} onChange={updateSizeSpec} />
           </section>
-          {!product || queuedModels.length ? (
+          <div className={step === 4 ? "" : "hidden"}>{!product || queuedModels.length ? (
             <QueuedModelsSection
               entries={queuedModels}
               product={product}
+              colorVariants={draft.colorVariants}
               disabled={saving}
               onChange={setQueuedModels}
               onUploaded={updateProductFromModelUpload}
@@ -584,28 +720,15 @@ function ProductEditor({
           ) : (
             <ModelUploadSection
               product={product}
+              colorVariants={draft.colorVariants}
               onUploaded={updateProductFromModelUpload}
             />
-          )}
+          )}</div>
+          {step === 5 && <section className="rounded-lg border border-border bg-muted p-5"><h3 className="font-bold text-foreground">Ready to {product ? "save changes" : "create this product"}</h3><dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2"><div><dt className="text-muted-foreground">Product</dt><dd className="font-semibold text-foreground">{draft.name || "Not named yet"}</dd></div><div><dt className="text-muted-foreground">Category</dt><dd className="font-semibold text-foreground">{draft.category || "Not chosen yet"}</dd></div><div><dt className="text-muted-foreground">Price</dt><dd className="font-semibold text-foreground">P{draft.price.toLocaleString()}</dd></div><div><dt className="text-muted-foreground">Sellable sizes</dt><dd className="font-semibold text-foreground">{draft.inventory.length}</dd></div></dl><p className="mt-4 text-sm text-muted-foreground">Confirm the details, then use the primary action below. You can return to any step to revise them.</p></section>}
         </div>
         <div className="flex gap-3 p-5 border-t border-border">
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex-1 py-3 rounded-full border border-border font-semibold"
-          >
-            Cancel
-          </button>
-          <button
-            disabled={saving}
-            className="flex-1 py-3 rounded-full bg-primary text-primary-foreground font-bold disabled:opacity-50"
-          >
-            {saving
-              ? "Working..."
-              : product
-                ? "Save Product Details"
-                : "Create Product"}
-          </button>
+          <button type="button" onClick={step === 0 ? onClose : () => setStep((current) => current - 1)} className="flex-1 py-3 rounded-lg border border-border font-semibold">{step === 0 ? "Cancel" : "Back"}</button>
+          {step < 5 ? <button type="button" onClick={() => setStep((current) => current + 1)} className="flex-1 py-3 rounded-lg bg-primary text-primary-foreground font-bold">Continue</button> : <button disabled={saving} className="flex-1 py-3 rounded-lg bg-primary text-primary-foreground font-bold disabled:opacity-50">{saving ? "Working..." : product ? "Save Product Details" : "Create Product"}</button>}
         </div>
       </form>
     </div>
@@ -660,6 +783,24 @@ function ImagePicker({
       </div>
     </div>
   );
+}
+
+function GalleryPicker({
+  existing,
+  files,
+  remaining,
+  onAdd,
+  onRemoveExisting,
+  onRemoveFile,
+}: {
+  existing: string[];
+  files: File[];
+  remaining: number;
+  onAdd: (files: File[]) => void;
+  onRemoveExisting: (image: string) => void;
+  onRemoveFile: (file: File) => void;
+}) {
+  return <section><div className="flex items-baseline justify-between gap-3"><div><p className="text-xs font-bold text-muted-foreground">Additional product images</p><p className="mt-1 text-xs text-muted-foreground">Up to {MAX_PRODUCT_IMAGES} images total, including the cover.</p></div><span className="text-xs font-semibold text-muted-foreground">{remaining} slot{remaining === 1 ? "" : "s"} left</span></div><div className="mt-2 border border-border p-3"><input type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={remaining === 0} onChange={(event) => { onAdd(Array.from(event.target.files || []).slice(0, remaining)); event.currentTarget.value = ""; }} className="input" />{(existing.length || files.length) > 0 && <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">{existing.map((image) => <div key={image} className="relative aspect-square overflow-hidden border border-border"><img src={image} alt="Saved additional product" className="h-full w-full object-cover" /><button type="button" onClick={() => onRemoveExisting(image)} className="absolute right-1 top-1 grid h-7 w-7 place-items-center bg-surface text-destructive" aria-label="Remove additional image"><X size={15} /></button></div>)}{files.map((file) => <div key={`${file.name}-${file.lastModified}`} className="relative flex aspect-square items-end border border-dashed border-border bg-muted p-2"><span className="break-all text-xs text-muted-foreground">{file.name}</span><button type="button" onClick={() => onRemoveFile(file)} className="absolute right-1 top-1 grid h-7 w-7 place-items-center bg-surface text-destructive" aria-label={`Remove ${file.name}`}><X size={15} /></button></div>)}</div>}</div></section>;
 }
 
 function SizeSpecEditor({
@@ -726,19 +867,21 @@ function InventoryRow({
   onRemove,
 }: {
   variant: InventoryItem;
-  onChange: (key: keyof InventoryItem, value: string | number) => void;
+  onChange: (key: keyof InventoryItem, value: string | number | undefined) => void;
   onRemove: () => void;
 }) {
   const [stockText, setStockText] = useState(String(variant.stock));
   const [thresholdText, setThresholdText] = useState(
     String(variant.lowStockThreshold),
   );
+  const [priceText, setPriceText] = useState(variant.price?.toString() || "");
 
   useEffect(() => setStockText(String(variant.stock)), [variant.stock]);
   useEffect(
     () => setThresholdText(String(variant.lowStockThreshold)),
     [variant.lowStockThreshold],
   );
+  useEffect(() => setPriceText(variant.price?.toString() || ""), [variant.price]);
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 rounded-xl border border-border p-3">
@@ -789,6 +932,20 @@ function InventoryRow({
           className="input"
         />
       </Label>
+      <Label text="Size price (optional)">
+        <input
+          type="number"
+          min="0"
+          step="0.01"
+          value={priceText}
+          onChange={(event) => {
+            setPriceText(event.target.value);
+            onChange("price", event.target.value === "" ? undefined : Number(event.target.value));
+          }}
+          placeholder="Use base price"
+          className="input"
+        />
+      </Label>
       <div className="flex items-end">
         <button
           type="button"
@@ -802,15 +959,27 @@ function InventoryRow({
   );
 }
 
+function ColorVariantsEditor({ variants, onChange }: { variants: Draft["colorVariants"]; onChange: (variants: Draft["colorVariants"]) => void }) {
+  const update = (index: number, patch: Partial<Draft["colorVariants"][number]>) => onChange(variants.map((variant, itemIndex) => itemIndex === index ? { ...variant, ...patch } : variant));
+  return (
+    <section className="border-t border-border pt-5">
+      <div className="flex items-center justify-between gap-4"><div><h3 className="font-bold text-foreground">Color Variants</h3><p className="mt-1 text-sm text-muted-foreground">Each color can have its own breed-specific GLB uploads.</p></div><button type="button" onClick={() => onChange([...variants, { name: "", hex: "#000000", models: [] }])} className="text-sm font-semibold text-primary">Add color</button></div>
+      <div className="mt-3 space-y-3">{variants.map((variant, index) => <div key={variant._id || index} className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-[1fr_8rem_auto]"><Label text="Color name"><input required value={variant.name} onChange={(event) => update(index, { name: event.target.value })} placeholder="e.g. Coral" className="input" /></Label><Label text="Hex"><div className="flex gap-2"><input type="color" value={variant.hex} onChange={(event) => update(index, { hex: event.target.value })} className="h-10 w-10 rounded border border-border p-1" /><input value={variant.hex} onChange={(event) => update(index, { hex: event.target.value })} className="input" /></div></Label><div className="flex items-end"><button type="button" disabled={variants.length === 1} onClick={() => onChange(variants.filter((_, itemIndex) => itemIndex !== index))} className="py-2 text-sm font-semibold text-destructive disabled:opacity-40">Remove</button></div></div>)}</div>
+    </section>
+  );
+}
+
 function QueuedModelsSection({
   entries,
   product,
+  colorVariants,
   disabled,
   onChange,
   onUploaded,
 }: {
   entries: QueuedModel[];
   product: Product | null;
+  colorVariants: Draft["colorVariants"];
   disabled: boolean;
   onChange: (entries: QueuedModel[]) => void;
   onUploaded: (product: Product) => Promise<void>;
@@ -845,6 +1014,7 @@ function QueuedModelsSection({
           updated.id,
           entry.breed.trim(),
           entry.file,
+          entry.colorName,
         );
       } catch (requestError) {
         failed.push(entry);
@@ -885,8 +1055,9 @@ function QueuedModelsSection({
           entries.map((entry) => (
             <div
               key={entry.id}
-              className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr_auto] gap-3 rounded-xl border border-border p-3"
+              className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_1.5fr_auto] gap-3 rounded-xl border border-border p-3"
             >
+              <Label text="Color"><select value={entry.colorName} onChange={(event) => update(entry.id, { colorName: event.target.value })} className="input">{colorVariants.map((variant) => <option key={variant.name} value={variant.name}>{variant.name}</option>)}</select></Label>
               <Label text="Breed">
                 <input
                   value={entry.breed}
@@ -949,18 +1120,22 @@ function QueuedModelsSection({
 
 function ModelUploadSection({
   product,
+  colorVariants,
   onUploaded,
 }: {
   product: Product;
+  colorVariants: Draft["colorVariants"];
   onUploaded: (product: Product) => Promise<void>;
 }) {
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [customBreed, setCustomBreed] = useState("");
+  const [selectedColorName, setSelectedColorName] = useState(product.colorVariants[0]?.name || "Default");
   const [customFile, setCustomFile] = useState<File | null>(null);
   const [busyBreed, setBusyBreed] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const breeds = product.models.map((model) => model.breed);
+  const selectedColor = product.colorVariants.find((variant) => variant.name === selectedColorName) || product.colorVariants[0];
+  const breeds = selectedColor?.models.map((model) => model.breed) || [];
 
   const upload = async (breed: string, file: File | null) => {
     if (!breed.trim())
@@ -976,9 +1151,9 @@ function ModelUploadSection({
     setError("");
     setSuccess("");
     try {
-      await onUploaded(await productsApi.uploadModel(product.id, breed, file));
+      await onUploaded(await productsApi.uploadModel(product.id, breed, file, selectedColorName));
       setSuccess(
-        `${breed} model ${product.models.some((model) => model.breed.toLowerCase() === breed.toLowerCase()) ? "replaced" : "uploaded"}.`,
+        `${breed} model ${selectedColor?.models.some((model) => model.breed.toLowerCase() === breed.toLowerCase()) ? "replaced" : "uploaded"}.`,
       );
       setCustomBreed("");
       setCustomFile(null);
@@ -998,7 +1173,7 @@ function ModelUploadSection({
     setError("");
     setSuccess("");
     try {
-      await onUploaded(await productsApi.deleteModel(product.id, breed));
+      await onUploaded(await productsApi.deleteModel(product.id, breed, selectedColorName));
       setSuccess(`${breed} model deleted.`);
     } catch (requestError) {
       setError(
@@ -1019,10 +1194,11 @@ function ModelUploadSection({
         should already contain the dog wearing this product.
       </p>
       {error && <p aria-live="polite" className="mt-3 text-sm text-destructive">{error}</p>}
-      {success && <p aria-live="polite" className="mt-3 text-sm text-green-700">{success}</p>}
+      {success && <p aria-live="polite" className="mt-3 text-sm text-success">{success}</p>}
+      <Label text="Color variant"><select value={selectedColorName} onChange={(event) => setSelectedColorName(event.target.value)} className="input mt-3">{colorVariants.map((variant) => <option key={variant.name} value={variant.name}>{variant.name} ({variant.hex})</option>)}</select></Label>
       <div className="mt-4 space-y-3">
         {breeds.map((breed) => {
-          const model = product.models.find(
+          const model = selectedColor?.models.find(
             (item) => item.breed.toLowerCase() === breed.toLowerCase(),
           );
           const busy = busyBreed === breed;
@@ -1048,7 +1224,7 @@ function ModelUploadSection({
                 <p className="font-semibold text-foreground">{breed}</p>
                 {model ? (
                   <>
-                    <p className="text-xs text-green-700">Uploaded</p>
+                    <p className="text-xs text-success">Uploaded</p>
                     <p className="text-xs text-muted-foreground">
                       Cloudinary model ready for preview
                     </p>
@@ -1151,6 +1327,7 @@ function productDraft(product: Product): Draft {
     inventory: product.inventory,
     sizeCharts: product.sizeCharts,
     sizeSpecs: product.sizeSpecs,
+    colorVariants: product.colorVariants,
   };
 }
 function filenameFromPath(modelPath: string) {
@@ -1179,9 +1356,6 @@ const statuses: Order["status"][] = [
   "pending",
   "confirmed",
   "processing",
-  "shipped",
-  "delivered",
-  "cancelled",
 ];
 
 const paymentStatuses: Order["paymentStatus"][] = [
@@ -1195,6 +1369,39 @@ function formatOrderStatus(status: string) {
     .split("_")
     .map((word) => word[0].toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+function CompactOrders({ onOrdersChanged }: { onOrdersChanged: () => void }) {
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [filter, setFilter] = useState<"all" | Order["status"]>("all");
+  const [query, setQuery] = useState("");
+  const [dateRange, setDateRange] = useState("all");
+  const [sort, setSort] = useState("newest");
+  const [page, setPage] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const pageSize = 10;
+  const load = async () => { setLoading(true); setError(""); try { setOrders((await ordersApi.admin()).orders as AdminOrder[]); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Unable to load orders"); } finally { setLoading(false); } };
+  useEffect(() => { void load(); }, []);
+  useEffect(() => { setPage(0); }, [filter, query, dateRange, sort]);
+  const visibleOrders = orders.filter((order) => {
+    const date = new Date(order.createdAt);
+    const now = new Date();
+    const matchesDate = dateRange === "all" || (dateRange === "week" && now.getTime() - date.getTime() <= 7 * 24 * 60 * 60 * 1000) || (dateRange === "month" && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear());
+    return matchesDate && (filter === "all" || order.status === filter) && `${order.orderNumber} ${order.user?.name || ""} ${order.user?.email || order.deliveryAddress.email}`.toLowerCase().includes(query.toLowerCase());
+  }).sort((a, b) => sort === "oldest" ? +new Date(a.createdAt) - +new Date(b.createdAt) : sort === "value" ? b.total - a.total : +new Date(b.createdAt) - +new Date(a.createdAt));
+  const pageCount = Math.max(1, Math.ceil(visibleOrders.length / pageSize));
+  const pagedOrders = visibleOrders.slice(page * pageSize, page * pageSize + pageSize);
+  const update = async (order: AdminOrder, status: Order["status"], paymentStatus = order.paymentStatus, cancellationReason?: string) => { setSaving(order.id); setError(""); try { const result = await ordersApi.updateStatus(order.id, status, paymentStatus, cancellationReason); setOrders((current) => current.map((item) => item.id === order.id ? { ...item, ...result.order } : item)); onOrdersChanged(); } catch (requestError) { setError(requestError instanceof Error ? requestError.message : "Unable to update order"); } finally { setSaving(null); } };
+  const tabs = ["all", "pending", "confirmed", "processing", "shipped", "delivered", "cancelled"] as const;
+  return <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Fulfillment</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Orders</h2><p className="mt-1 text-muted-foreground">Keep customer orders moving without losing the details.</p></div><button type="button" onClick={() => void load()} className="rounded-lg border border-border p-2.5 text-muted-foreground" aria-label="Refresh orders" title="Refresh orders"><RefreshCw size={16} /></button></div>
+    <div className="mt-6 flex gap-2 overflow-x-auto pb-1">{tabs.map((status) => <button key={status} onClick={() => setFilter(status)} className={`whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-semibold ${filter === status ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card text-muted-foreground"}`}>{status === "all" ? "All" : formatOrderStatus(status)} <span className="ml-1 text-xs">{status === "all" ? orders.length : orders.filter((order) => order.status === status).length}</span></button>)}</div>
+    <div className="mt-4 flex flex-wrap gap-3"><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search order or customer" className="input max-w-sm" /><select value={dateRange} onChange={(event) => setDateRange(event.target.value)} className="input w-auto" aria-label="Date range"><option value="all">All dates</option><option value="week">Last 7 days</option><option value="month">This month</option></select><select value={sort} onChange={(event) => setSort(event.target.value)} className="input w-auto" aria-label="Sort orders"><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="value">Highest value</option></select></div>
+    {error && <p className="mt-5 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
+    <div className="mt-6 overflow-x-auto rounded-lg border border-border bg-card">{loading ? <p className="p-8 text-center text-muted-foreground">Loading orders</p> : pagedOrders.length ? <table className="w-full min-w-[760px] text-sm"><thead className="border-b border-border bg-muted text-left text-xs uppercase tracking-[0.08em] text-muted-foreground"><tr><th className="p-3">Order</th><th className="p-3">Customer</th><th className="p-3">Items</th><th className="p-3">Total</th><th className="p-3">Payment</th><th className="p-3">Status</th></tr></thead><tbody>{pagedOrders.map((order) => <tr key={order.id} className="border-b border-border last:border-0"><td className="p-3"><p className="font-bold text-foreground">{order.orderNumber}</p><p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString()}</p></td><td className="p-3"><p className="font-semibold text-foreground">{order.user?.name || `${order.deliveryAddress.firstName} ${order.deliveryAddress.lastName}`}</p><p className="max-w-40 truncate text-xs text-muted-foreground">{order.user?.email || order.deliveryAddress.email}</p></td><td className="p-3 text-muted-foreground">{order.items.reduce((sum, item) => sum + item.quantity, 0)} item(s)</td><td className="p-3 font-bold text-foreground">P{order.total.toLocaleString()}</td><td className="p-3"><select disabled={saving === order.id} value={order.paymentStatus} onChange={(event) => void update(order, order.status, event.target.value as Order["paymentStatus"])} className="border border-border bg-surface px-2 py-1.5 text-xs font-semibold text-foreground"><option value="pending">Pending</option><option value="paid">Paid</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select></td><td className="p-3"><select disabled={saving === order.id || !statuses.includes(order.status)} value={order.status} onChange={(event) => { const next = event.target.value as Order["status"]; if (next === "cancelled" && order.status !== "cancelled") { const reason = window.prompt("Enter the cancellation reason for the customer."); if (!reason?.trim()) { setError("A cancellation reason is required."); return; } void update(order, next, order.paymentStatus, reason.trim()); return; } void update(order, next); }} className="border border-border bg-surface px-2 py-1.5 text-xs font-semibold text-foreground">{!statuses.includes(order.status) && <option value={order.status}>{formatOrderStatus(order.status)}</option>}{statuses.map((status) => <option key={status} value={status}>{formatOrderStatus(status)}</option>)}</select></td></tr>)}</tbody></table> : <p className="p-8 text-center text-muted-foreground">No orders match this view.</p>}</div>
+    {!loading && visibleOrders.length > pageSize && <div className="mt-4 flex items-center justify-between text-sm"><span className="text-muted-foreground">Page {page + 1} of {pageCount}</span><div className="flex gap-2"><button disabled={page === 0} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-border px-3 py-2 disabled:text-muted-foreground">Previous</button><button disabled={page + 1 >= pageCount} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-border px-3 py-2 disabled:text-muted-foreground">Next</button></div></div>}
+  </section>;
 }
 
 function AdminOrders() {
@@ -1255,7 +1462,8 @@ function AdminOrders() {
     }
   };
 
-  const orderGroups = (filter === "all" ? statuses : [filter])
+  const displayStatuses = Array.from(new Set([...statuses, ...orders.map((order) => order.status)]));
+  const orderGroups = (filter === "all" ? displayStatuses : [filter])
     .map((status) => ({
       status,
       orders: orders.filter((order) => order.status === status),
@@ -1284,7 +1492,7 @@ function AdminOrders() {
               className="input w-auto"
             >
               <option value="all">All orders</option>
-              {statuses.map((status) => (
+              {displayStatuses.map((status) => (
                 <option key={status} value={status}>
                   {formatOrderStatus(status)}
                 </option>
@@ -1302,7 +1510,7 @@ function AdminOrders() {
           </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {statuses.map((status) => {
+          {displayStatuses.map((status) => {
             const count = orders.filter((order) => order.status === status).length;
             return (
               <button
@@ -1365,7 +1573,7 @@ function AdminOrders() {
                       <span className="font-semibold text-foreground">
                         {item.name}
                       </span>{" "}
-                      · Size {item.size} · Qty {item.quantity}{item.breed ? ` · Previewed as ${item.breed}` : ""}
+                      · Size {item.size}{item.colorName ? ` · ${item.colorName}` : ""} · Qty {item.quantity}{item.breed ? ` · Previewed as ${item.breed}` : ""}
                     </p>
                   ))}
                 </div>
@@ -1378,7 +1586,7 @@ function AdminOrders() {
                   <label className="flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
                     Order status
                     <select
-                      disabled={saving === order.id}
+                      disabled={saving === order.id || !statuses.includes(order.status)}
                       value={order.status}
                       onChange={(event) => {
                         const nextStatus = event.target.value as Order["status"];
@@ -1395,12 +1603,14 @@ function AdminOrders() {
                       }}
                       className="input"
                     >
+                      {!statuses.includes(order.status) && <option value={order.status}>{formatOrderStatus(order.status)} (managed by logistics)</option>}
                       {statuses.map((status) => (
                         <option key={status} value={status}>
                           {formatOrderStatus(status)}
                         </option>
                       ))}
                     </select>
+                    {!statuses.includes(order.status) && <span className="text-xs font-normal text-muted-foreground">This historical logistics status is read-only.</span>}
                   </label>
                   <label className="flex flex-col gap-1.5 text-xs font-bold text-muted-foreground">
                     Payment status
