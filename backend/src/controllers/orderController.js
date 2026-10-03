@@ -146,7 +146,7 @@ export async function listAdminOrders(req, res, next) {
 export async function updateOrderStatus(req, res, next) {
   const session = await mongoose.startSession();
   try {
-    const validStatuses = ["pending", "confirmed", "processing"];
+    const validStatuses = ["pending", "confirmed", "processing", "cancelled"];
     const { status, paymentStatus } = req.body;
     if (!validStatuses.includes(status)) return res.status(400).json({ message: "A valid order status is required" });
     if (paymentStatus !== undefined && !["pending", "paid", "failed", "refunded"].includes(paymentStatus)) return res.status(400).json({ message: "A valid payment status is required" });

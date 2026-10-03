@@ -116,15 +116,11 @@ function normalizeColorVariants(data) {
   if (data.colorVariants === undefined) return;
   if (!Array.isArray(data.colorVariants))
     throw Object.assign(new Error("Color variants must be an array"), { statusCode: 400 });
-  const names = new Set();
   for (const variant of data.colorVariants) {
     variant.name = String(variant.name || "").trim();
     variant.hex = String(variant.hex || "").trim();
     if (!variant.name || !/^#[0-9a-f]{6}$/i.test(variant.hex))
       throw Object.assign(new Error("Every color variant needs a name and six-digit hex value"), { statusCode: 400 });
-    if (names.has(variant.name.toLowerCase()))
-      throw Object.assign(new Error("Color variant names must be unique"), { statusCode: 400 });
-    names.add(variant.name.toLowerCase());
     variant.models = Array.isArray(variant.models) ? variant.models : [];
   }
   // Keep older consumers working with the first colour's model set.

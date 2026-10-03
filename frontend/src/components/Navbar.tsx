@@ -4,6 +4,7 @@ import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
 import { useAuth } from "../context/AuthContext";
 import pawfitLogo from "../assets/logo";
+import { toast } from "sonner";
 
 export default function Navbar() {
   const { count, openCart } = useCart();
@@ -90,6 +91,7 @@ export default function Navbar() {
                   void logout().finally(() => {
                     navigate("home");
                     setMenuOpen(false);
+                    toast.success("You have been signed out.");
                   });
                 }}
                 className="text-left text-sm text-muted-foreground"

@@ -14,6 +14,7 @@ import AdminPage from "../pages/AdminPage";
 import VerifyEmailPage from "../pages/VerifyEmailPage";
 import ResetPasswordPage from "../pages/ResetPasswordPage";
 import AccountPage from "../pages/AccountPage";
+import { Toaster } from "sonner";
 
 function PageRenderer() {
   const { page, productId } = useRouter();
@@ -62,6 +63,7 @@ export default function App() {
       <AuthProvider>
         <CartProvider>
           <PageRenderer />
+          <Toaster position="top-center" closeButton toastOptions={{ className: "border border-border bg-surface text-foreground" }} />
         </CartProvider>
       </AuthProvider>
     </RouterProvider>
