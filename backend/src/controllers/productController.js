@@ -5,6 +5,7 @@ import {
   deleteImageAsset,
   deleteModelAsset,
   uploadImageBuffer,
+  finalizePendingImage,
   uploadModelBuffer,
 } from "../utils/cloudinaryAssets.js";
 const editableFields = [
@@ -271,6 +272,12 @@ export async function createProduct(req, res, next) {
     uploadedImagePublicId = data.imageCloudinaryPublicId;
 
     createdProduct = await Product.create(data);
+    const finalAssets = await Promise.all((createdProduct.images?.length ? createdProduct.images : [createdProduct.image]).map(async (url) => (await finalizePendingImage(url, createdProduct._id)) || { url, publicId: url === createdProduct.image ? createdProduct.imageCloudinaryPublicId : "" }));
+    createdProduct.images = finalAssets.map((asset) => asset.url);
+    createdProduct.image = finalAssets[0]?.url || createdProduct.image;
+    createdProduct.imageCloudinaryPublicId = finalAssets[0]?.publicId || createdProduct.imageCloudinaryPublicId;
+    createdProduct.imagePublicIds = finalAssets.map((asset) => asset.publicId).filter(Boolean);
+    await createdProduct.save();
 
     res.status(201).json({ product: createdProduct });
   } catch (error) {

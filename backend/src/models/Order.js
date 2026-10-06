@@ -42,9 +42,7 @@ const orderSchema = new mongoose.Schema({
   paymentMethod: { type: String, enum: ["cod", "gcash", "maya"], required: true },
   paymentReference: { type: String, trim: true, maxlength: 100 },
   paymentStatus: { type: String, enum: ["pending", "paid", "failed", "refunded"], default: "pending" },
-  // Logistics statuses remain readable on historical orders, but sellers may
-  // only set the workflow states below through the API.
-  status: { type: String, enum: ["pending", "confirmed", "processing", "cancelled"], default: "pending", index: true },
+  status: { type: String, enum: ["pending", "confirmed", "processing", "delivered", "cancelled"], default: "pending", index: true },
   subtotal: { type: Number, required: true, min: 0 },
   shippingFee: { type: Number, required: true, min: 0 },
   total: { type: Number, required: true, min: 0 },
@@ -52,6 +50,8 @@ const orderSchema = new mongoose.Schema({
   cancellationReason: { type: String, trim: true, maxlength: 500 },
   cancelledBy: { type: String, enum: ["customer", "admin"] },
   cancelledAt: { type: Date },
+  deliveredBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  deliveredAt: { type: Date },
 }, { timestamps: true });
 
 export default mongoose.model("Order", orderSchema);

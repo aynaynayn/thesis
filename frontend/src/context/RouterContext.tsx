@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type Page = "home" | "shop" | "about" | "product" | "checkout" | "auth" | "account" | "admin" | "verify-email" | "reset-password";
+export type Page = "home" | "shop" | "about" | "product" | "checkout" | "auth" | "account" | "admin" | "superadmin" | "verify-email" | "reset-password";
 
 type Route = { page: Page; productId: string | null };
 type RouterContextType = Route & { navigate: (page: Page, productId?: string) => void };
@@ -15,6 +15,7 @@ function readRoute(): Route {
   if (path === "/auth") return { page: "auth", productId: null };
   if (path === "/account") return { page: "account", productId: null };
   if (path === "/admin") return { page: "admin", productId: null };
+  if (path === "/superadmin") return { page: "superadmin", productId: null };
   if (path === "/verify-email") return { page: "verify-email", productId: null };
   if (path === "/reset-password") return { page: "reset-password", productId: null };
   if (path.startsWith("/products/")) return { page: "product", productId: decodeURIComponent(path.slice(10)) };

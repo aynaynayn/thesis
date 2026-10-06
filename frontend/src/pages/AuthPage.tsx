@@ -44,8 +44,7 @@ export default function AuthPage() {
       if (mode === "login") {
         const user = await login(form.email, form.password);
 
-        // Automatically redirect admins to the admin dashboard
-        navigate(user.role === "admin" ? "admin" : "home");
+        navigate(user.role === "superadmin" ? "superadmin" : user.role === "admin" ? "admin" : "home");
       } else if (mode === "register") {
         await authApi.register(form);
         setMessage("Account created successfully. You can now sign in.");

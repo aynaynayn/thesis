@@ -8,7 +8,9 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "seed-admin": "node src/adminSeed.js"
+    "seed-admin": "node src/adminSeed.js",
+    "seed:superadmin": "node src/superadminSeed.js",
+    "migrate:roles": "node src/migrateRoles.js"
   },
   "keywords": [],
   "author": "",

@@ -10,6 +10,7 @@ import {
   createPetProfile,
   updatePetProfile,
   deletePetProfile,
+  changePassword,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/authMiddleware.js";
 
@@ -22,6 +23,7 @@ router.post("/forgot-password", requestPasswordReset);
 router.post("/reset-password", resetPassword);
 router.get("/me", protect, getMe);
 router.patch("/profile", protect, updateProfile);
+router.patch("/password", protect, changePassword);
 router.post("/pet-profiles", protect, createPetProfile);
 router.patch("/pet-profiles/:id", protect, updatePetProfile);
 router.delete("/pet-profiles/:id", protect, deletePetProfile);

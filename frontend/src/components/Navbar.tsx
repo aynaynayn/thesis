@@ -1,10 +1,11 @@
 import { Search, ShoppingBag, UserRound, X, Menu } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useCart } from "../context/CartContext";
 import { useRouter } from "../context/RouterContext";
 import { useAuth } from "../context/AuthContext";
 import pawfitLogo from "../assets/logo";
 import { toast } from "sonner";
+import { storeSettingsApi } from "../lib/api";
 
 export default function Navbar() {
   const { count, openCart } = useCart();
@@ -12,6 +13,8 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [announcementMessages, setAnnouncementMessages] = useState<string[] | null>(null);
+  useEffect(() => { void storeSettingsApi.get().then(({ settings }) => setAnnouncementMessages((settings.announcement || "").split("\n").map((message) => message.trim()).filter(Boolean))).catch(() => setAnnouncementMessages([])); }, []);
   const navLinks = [
     { label: "Home", page: "home" as const },
     { label: "Shop", page: "shop" as const },
@@ -24,7 +27,7 @@ export default function Navbar() {
     : "auth";
   return (
     <>
-      <div className="announcement-marquee overflow-hidden border-b border-foreground bg-foreground py-2 text-background" aria-label="PawFit announcement"><div className="announcement-track"><span>Made for real dogs, measured for real life&nbsp;&nbsp;&nbsp; Free delivery on orders over PHP 2,000&nbsp;&nbsp;&nbsp;</span><span aria-hidden="true">Made for real dogs, measured for real life&nbsp;&nbsp;&nbsp; Free delivery on orders over PHP 2,000&nbsp;&nbsp;&nbsp;</span><span aria-hidden="true">Made for real dogs, measured for real life&nbsp;&nbsp;&nbsp; Free delivery on orders over PHP 2,000&nbsp;&nbsp;&nbsp;</span><span aria-hidden="true">Made for real dogs, measured for real life&nbsp;&nbsp;&nbsp; Free delivery on orders over PHP 2,000&nbsp;&nbsp;&nbsp;</span></div></div>
+      {announcementMessages === null ? <div className="h-9" aria-hidden="true" /> : announcementMessages.length > 0 && <AnnouncementBar messages={announcementMessages} />}
       <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <button onClick={() => navigate("home")} className="shrink-0" aria-label="PawFit home">
@@ -91,7 +94,6 @@ export default function Navbar() {
                   void logout().finally(() => {
                     navigate("home");
                     setMenuOpen(false);
-                    toast.success("You have been signed out.");
                   });
                 }}
                 className="text-left text-sm text-muted-foreground"
@@ -106,4 +108,9 @@ export default function Navbar() {
       {searchOpen && <div className="fixed inset-0 z-50 bg-background p-5"><div className="mx-auto flex max-w-3xl items-center gap-3"><Search size={20} /><input autoFocus placeholder="Search the collection" onKeyDown={(event) => { if (event.key === "Enter") { navigate("shop"); setSearchOpen(false); } }} className="flex-1 border-b border-foreground bg-transparent py-3 text-lg outline-none" /><button onClick={() => setSearchOpen(false)} aria-label="Close search"><X size={22} /></button></div></div>}
     </>
   );
+}
+
+function AnnouncementBar({ messages }: { messages: string[] }) {
+  const unit = messages.map((message, index) => <span key={`${message}-${index}`}>{message}<span aria-hidden="true" className="inline-block w-14" /></span>);
+  return <div className="announcement-marquee overflow-hidden border-b border-foreground bg-foreground py-2 text-background" aria-label="PawFit announcement"><div className="announcement-track">{[0, 1, 2, 3].map((copy) => <span key={copy} className="contents" aria-hidden={copy > 0}>{unit}</span>)}</div><p className="announcement-static">{messages[0]}</p></div>;
 }

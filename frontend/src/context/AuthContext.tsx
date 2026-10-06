@@ -38,6 +38,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
       setUser(null);
+      // The Super Admin workspace still owns its existing post-redirect toast.
+      if (user?.role !== "superadmin")
+        window.sessionStorage.setItem("pawfit-auth-notice", "signed-out");
     }
   };
 

@@ -10,6 +10,8 @@ import authRoutes from "./routes/authRoutes.js";
 import productRoutes from "./routes/productRoutes.js";
 import cartRoutes from "./routes/cartRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
+import superAdminRoutes from "./routes/superAdminRoutes.js";
+import { getSettings } from "./controllers/superAdminController.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 const app = express();
@@ -72,6 +74,8 @@ app.use(
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
+app.get("/api/settings", getSettings);
+app.use("/api/superadmin", superAdminRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

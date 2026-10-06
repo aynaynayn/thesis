@@ -45,7 +45,10 @@ const userSchema = new mongoose.Schema(
     passwordResetToken: { type: String, select: false },
     passwordResetTokenExpires: { type: Date, select: false },
     phone: { type: String, trim: true, maxlength: 30 },
-    role: { type: String, enum: ["user", "admin"], default: "user" },
+    role: { type: String, enum: ["user", "admin", "superadmin"], default: "user", index: true },
+    isActive: { type: Boolean, default: true, index: true },
+    isOwner: { type: Boolean, default: false },
+    mustChangePassword: { type: Boolean, default: false },
     addresses: [addressSchema],
     petProfiles: { type: [petProfileSchema], default: [] },
     // Retained for existing accounts. It is folded into petProfiles when the
@@ -53,6 +56,11 @@ const userSchema = new mongoose.Schema(
     petProfile: { type: petProfileSchema, default: () => ({}) },
   },
   { timestamps: true },
+);
+
+userSchema.index(
+  { role: 1 },
+  { unique: true, partialFilterExpression: { role: "superadmin" } },
 );
 
 export default mongoose.model("User", userSchema);

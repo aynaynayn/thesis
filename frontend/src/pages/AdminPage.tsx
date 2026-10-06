@@ -84,7 +84,7 @@ export default function AdminPage() {
         Checking account access
       </main>
     );
-  if (!user || user.role !== "admin")
+  if (!user || (user.role !== "admin" && user.role !== "superadmin"))
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
@@ -131,7 +131,7 @@ export default function AdminPage() {
         <nav className="mt-7 grid gap-1">
           {[["dashboard", "Dashboard", LayoutDashboard], ["products", "Products", Package], ["add", "Add Product", Plus], ["orders", "Orders", ShoppingBag], ["models", "3D Models", Box]].map(([view, label, Icon]) => { const AdminIcon = Icon as typeof Package; const isActive = adminView === view || (view === "add" && editing !== undefined); return <button key={String(view)} onClick={() => { setAdminView(view as typeof adminView); if (view === "add") openEditor(); else setMobileNavOpen(false); }} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-semibold ${isActive ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}><AdminIcon size={17} /><span className="flex-1">{String(label)}</span>{view === "orders" && pendingOrderCount > 0 && <span className={`min-w-5 rounded-full px-1.5 py-0.5 text-center text-[10px] ${isActive ? "bg-surface text-primary" : "bg-accent text-white"}`}>{pendingOrderCount}</span>}</button>; })}
         </nav>
-        <button onClick={() => void logout().then(() => { navigate("home"); toast.success("You have been signed out."); })} className="mt-8 flex items-center gap-2 px-3 text-sm font-semibold text-muted-foreground"><LogOut size={16} /> Sign out</button>
+        <button onClick={() => void logout().then(() => { navigate("home"); })} className="mt-8 flex items-center gap-2 px-3 text-sm font-semibold text-muted-foreground"><LogOut size={16} /> Sign out</button>
       </aside>
       <div>
       <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 md:hidden"><h1 className="font-bold text-foreground">PawFit Admin</h1><button onClick={() => setMobileNavOpen(true)} aria-label="Open admin menu"><Menu size={22} /></button></header>
@@ -292,7 +292,7 @@ function AdminDashboard({
 
   return <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10">
     <div className="flex flex-wrap items-end justify-between gap-4">
-      <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Seller overview</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Good morning, PawFit</h2><p className="mt-1 text-muted-foreground">Today’s orders, revenue, and inventory signals in one place.</p></div>
+      <div><p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">Store overview</p><h2 className="mt-1 text-2xl font-extrabold text-foreground">Good morning, PawFit</h2><p className="mt-1 text-muted-foreground">Today’s orders, revenue, and inventory signals in one place.</p></div>
       <div className="flex gap-2"><button onClick={() => void loadOrders()} className="rounded-lg border border-border bg-card p-2.5 text-muted-foreground" aria-label="Refresh dashboard" title="Refresh dashboard"><RefreshCw size={16} /></button><button onClick={onShowOrders} className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground"><ShoppingBag size={16} /> Review orders</button></div>
     </div>
     {error && <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/30 bg-danger/10 p-4 text-sm text-danger"><span>Order statistics could not load: {error}</span><button onClick={() => void loadOrders()} className="font-bold underline">Try again</button></div>}

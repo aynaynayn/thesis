@@ -16,6 +16,7 @@ export async function protect(req, res, next) {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(payload.id);
     if (!user) return res.status(401).json({ message: "Account no longer exists" });
+    if (user.isActive === false) return res.status(403).json({ message: "This account has been deactivated" });
     req.user = user;
     next();
   } catch (_error) {

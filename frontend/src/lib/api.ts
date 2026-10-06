@@ -39,7 +39,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export type PetProfile = { id: string; name: string; breed: string; neckGirthCm: number; chestGirthCm: number; backLengthCm: number };
 export type PetProfileInput = Omit<PetProfile, "id">;
-export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin"; petProfiles: PetProfile[] };
+export type User = { id: string; name: string; email: string; phone?: string; role: "user" | "admin" | "superadmin"; isActive?: boolean; isOwner?: boolean; mustChangePassword?: boolean; petProfiles: PetProfile[] };
 
 export const authApi = {
   register: (body: { name: string; email: string; password: string; phone?: string }) => request<{ message: string; user: User }>("/auth/register", { method: "POST", body: JSON.stringify(body) }),
@@ -53,6 +53,32 @@ export const authApi = {
   resendVerification: (email: string) => request<{ message: string }>("/auth/resend-verification", { method: "POST", body: JSON.stringify({ email }) }),
   forgotPassword: (email: string) => request<{ message: string }>("/auth/forgot-password", { method: "POST", body: JSON.stringify({ email }) }),
   resetPassword: (token: string, password: string) => request<{ message: string }>("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) }),
+  changePassword: (body: { currentPassword: string; newPassword: string; confirmPassword: string }) => request<{ message: string }>("/auth/password", { method: "PATCH", body: JSON.stringify(body) }),
+};
+
+export type AdminAccount = { id: string; name: string; email: string; role: "user" | "admin" | "superadmin"; isActive: boolean; isOwner: boolean; pets: number; createdAt: string };
+export const superAdminApi = {
+  overview: () => request<{ stats: { totalUsers: number; activeAdmins: number; totalProducts: number; totalOrders: number; revenueThisMonth: number }; bestSelling: { _id: string; name: string; quantity: number }[]; lowStock: Product[]; pending: { orderNumber: string; createdAt: string }[] }>("/superadmin/overview"),
+  accounts: (params = "") => request<{ accounts: AdminAccount[]; total: number; page: number; pages: number }>(`/superadmin/accounts${params ? `?${params}` : ""}`),
+  createAdmin: (body: { name: string; email: string; temporaryPassword: string }) => request<{ account: AdminAccount; temporaryPassword: string }>("/superadmin/accounts", { method: "POST", body: JSON.stringify(body) }),
+  updateAccount: (id: string, body: Partial<Pick<AdminAccount, "role" | "isActive">>) => request<{ account: AdminAccount }>(`/superadmin/accounts/${id}`, { method: "PATCH", body: JSON.stringify(body) }),
+  categories: () => request<{ categories: { id: string; name: string; productCount: number }[] }>("/superadmin/categories"),
+  createCategory: (name: string) => request("/superadmin/categories", { method: "POST", body: JSON.stringify({ name }) }),
+  renameCategory: (id: string, name: string) => request(`/superadmin/categories/${id}`, { method: "PATCH", body: JSON.stringify({ name }) }),
+  deleteCategory: (id: string) => request<void>(`/superadmin/categories/${id}`, { method: "DELETE" }),
+  settings: () => request<{ settings: { storeName: string; supportEmail: string; announcement: string } }>("/superadmin/settings"),
+  updateSettings: (body: { storeName: string; supportEmail: string; announcement: string }) => request<{ settings: { storeName: string; supportEmail: string; announcement: string } }>("/superadmin/settings", { method: "PATCH", body: JSON.stringify(body) }),
+  transferOwnership: (body: { accountId: string; phrase: string; currentPassword: string }) => request<{ message: string }>("/superadmin/settings/transfer-ownership", { method: "POST", body: JSON.stringify(body) }),
+  audit: (params = "") => request<{ items: { _id: string; actorName: string; action: string; targetLabel: string; details: Record<string, { from?: string; to?: string }>; createdAt: string }[]; total: number; page: number; pages: number }>(`/superadmin/audit${params ? `?${params}` : ""}`),
+  products: () => request<{ products: (Product & { modelCoverage: { uploaded: number; total: number } })[] }>("/superadmin/products"),
+  toggleProduct: (id: string) => request(`/superadmin/products/${id}/toggle`, { method: "PATCH" }),
+  deleteProduct: (id: string) => request<void>(`/superadmin/products/${id}`, { method: "DELETE" }),
+  orders: () => request<{ orders: Order[] }>("/superadmin/orders"),
+  orderTimeline: (id: string) => request<{ logs: { _id: string; actorName: string; action: string; details: { from?: string; to?: string }; createdAt: string }[] }>(`/superadmin/orders/${id}/timeline`),
+};
+
+export const storeSettingsApi = {
+  get: () => request<{ settings: { storeName: string; supportEmail: string; announcement: string } }>("/settings"),
 };
 
 export const productsApi = {

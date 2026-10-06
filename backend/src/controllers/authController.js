@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { writeAudit } from "../utils/audit.js";
 
 const passwordPattern =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -18,6 +19,9 @@ function publicUser(user) {
     email: user.email,
     phone: user.phone,
     role: user.role,
+    isActive: user.isActive,
+    isOwner: user.isOwner,
+    mustChangePassword: user.mustChangePassword,
     petProfiles: petProfiles.map((profile) => ({
       id: String(profile._id),
       name: profile.name,
@@ -117,6 +121,7 @@ export async function login(req, res, next) {
         message: "Invalid credentials",
       });
     }
+    if (user.isActive === false) return res.status(403).json({ message: "This account has been deactivated" });
 
     res.json({
       token: createToken(user),
@@ -270,5 +275,22 @@ export async function deletePetProfile(req, res, next) {
     req.user.petProfile = {};
     await req.user.save();
     res.json({ user: publicUser(req.user) });
+  } catch (error) { next(error); }
+}
+
+export async function changePassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword) return res.status(400).json({ message: "Current password, new password, and confirmation are required" });
+    if (newPassword !== confirmPassword) return res.status(400).json({ message: "New password and confirmation must match" });
+    const user = await User.findById(req.user._id).select("+password");
+    if (!user || !(await bcrypt.compare(currentPassword, user.password))) return res.status(400).json({ message: "Current password is incorrect" });
+    if (await bcrypt.compare(newPassword, user.password)) return res.status(400).json({ message: "New password must be different from the current password" });
+    if (!passwordPattern.test(newPassword)) return res.status(400).json({ message: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character" });
+    user.password = await bcrypt.hash(newPassword, 12);
+    user.mustChangePassword = false;
+    await user.save();
+    await writeAudit(user, "password_changed", "account", user);
+    res.json({ message: "Password changed successfully" });
   } catch (error) { next(error); }
 }

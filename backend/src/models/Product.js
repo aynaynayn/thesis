@@ -84,6 +84,7 @@ const productSchema = new mongoose.Schema(
     image: { type: String, trim: true },
     imageCloudinaryPublicId: { type: String, trim: true },
     images: { type: [String], default: [] },
+    imagePublicIds: { type: [String], default: [] },
     featured: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true, index: true },
     // Retained for search/filter compatibility. It is derived from models and

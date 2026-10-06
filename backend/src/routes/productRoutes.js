@@ -7,15 +7,15 @@ import { uploadPendingProductImage, uploadProductImage as uploadProductImageFile
 const router = Router();
 
 router.get("/", listProducts);
-router.get("/admin/all", protect, authorize("admin"), listAdminProducts);
-router.post("/", protect, authorize("admin"), createProduct);
-router.post("/image-upload", protect, authorize("admin"), uploadPendingProductImage, uploadPendingImage);
-router.post("/:id/image", protect, authorize("admin"), requireExistingProduct, uploadProductImageFile, uploadProductImage);
-router.post("/:id/models", protect, authorize("admin"), requireExistingProduct, uploadProductModelFile, uploadProductModel);
-router.delete("/:id/models/:breed", protect, authorize("admin"), requireExistingProduct, deleteProductModel);
-router.patch("/:id/inventory", protect, authorize("admin"), adjustInventory);
-router.patch("/:id", protect, authorize("admin"), updateProduct);
-router.delete("/:id", protect, authorize("admin"), deleteProduct);
+router.get("/admin/all", protect, authorize("admin", "superadmin"), listAdminProducts);
+router.post("/", protect, authorize("admin", "superadmin"), createProduct);
+router.post("/image-upload", protect, authorize("admin", "superadmin"), uploadPendingProductImage, uploadPendingImage);
+router.post("/:id/image", protect, authorize("admin", "superadmin"), requireExistingProduct, uploadProductImageFile, uploadProductImage);
+router.post("/:id/models", protect, authorize("admin", "superadmin"), requireExistingProduct, uploadProductModelFile, uploadProductModel);
+router.delete("/:id/models/:breed", protect, authorize("admin", "superadmin"), requireExistingProduct, deleteProductModel);
+router.patch("/:id/inventory", protect, authorize("admin", "superadmin"), adjustInventory);
+router.patch("/:id", protect, authorize("admin", "superadmin"), updateProduct);
+router.delete("/:id", protect, authorize("admin", "superadmin"), deleteProduct);
 router.get("/:id", getProduct);
 
 export default router;

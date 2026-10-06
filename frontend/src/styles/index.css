@@ -46,7 +46,8 @@
 }
 
 .announcement-track { display: flex; width: max-content; animation: announcement-scroll 18s linear infinite; }
-.announcement-track span { display: block; white-space: nowrap; padding-right: 3rem; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+.announcement-track > span > span { display: inline-block; white-space: nowrap; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
 .announcement-marquee:hover .announcement-track { animation-play-state: paused; }
 @keyframes announcement-scroll { from { transform: translateX(0); } to { transform: translateX(-25%); } }
-@media (prefers-reduced-motion: reduce) { .announcement-track { animation: none; } }
+.announcement-static { display: none; margin: 0; padding: 0 1rem; text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+@media (prefers-reduced-motion: reduce) { .announcement-track { display: none; } .announcement-static { display: block; } }

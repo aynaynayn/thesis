@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Cart from "../models/Cart.js";
 import Order from "../models/Order.js";
 import Product from "../models/Product.js";
+import { writeAudit } from "../utils/audit.js";
 
 const shippingFee = Number(process.env.FLAT_SHIPPING_FEE || 100);
 
@@ -146,7 +147,9 @@ export async function listAdminOrders(req, res, next) {
 export async function updateOrderStatus(req, res, next) {
   const session = await mongoose.startSession();
   try {
-    const validStatuses = ["pending", "confirmed", "processing", "cancelled"];
+    const validStatuses = req.user.role === "superadmin"
+      ? ["pending", "confirmed", "processing", "delivered", "cancelled"]
+      : ["pending", "confirmed", "processing"];
     const { status, paymentStatus } = req.body;
     if (!validStatuses.includes(status)) return res.status(400).json({ message: "A valid order status is required" });
     if (paymentStatus !== undefined && !["pending", "paid", "failed", "refunded"].includes(paymentStatus)) return res.status(400).json({ message: "A valid payment status is required" });
@@ -154,7 +157,8 @@ export async function updateOrderStatus(req, res, next) {
     await session.withTransaction(async () => {
       order = await Order.findById(req.params.id).session(session);
       if (!order) throw Object.assign(new Error("Order not found"), { statusCode: 404 });
-      if (order.status === "cancelled" && status !== "cancelled") throw Object.assign(new Error("Cancelled orders cannot be reopened"), { statusCode: 409 });
+      if (["cancelled", "delivered"].includes(order.status) && status !== order.status) throw Object.assign(new Error("Completed orders cannot return to processing"), { statusCode: 409 });
+      const previousStatus = order.status;
       if (status === "cancelled" && order.status !== "cancelled") {
         const cancellationReason = String(req.body.cancellationReason || "").trim();
         if (!cancellationReason)
@@ -165,9 +169,14 @@ export async function updateOrderStatus(req, res, next) {
         await restoreInventory(order, session);
       } else {
         order.status = status;
+        if (status === "delivered" && previousStatus !== "delivered") {
+          order.deliveredBy = req.user._id;
+          order.deliveredAt = new Date();
+        }
         if (paymentStatus && ["pending", "paid", "failed", "refunded"].includes(paymentStatus)) order.paymentStatus = paymentStatus;
       }
       await order.save({ session });
+      await writeAudit(req.user, "order_status_changed", "order", order, { from: previousStatus, to: status });
     });
     res.json({ order: serialiseOrder(order) });
   } catch (error) { next(error); }

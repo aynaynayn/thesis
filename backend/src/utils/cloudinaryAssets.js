@@ -42,6 +42,17 @@ export function uploadImageBuffer(buffer, folder) {
   });
 }
 
+export async function finalizePendingImage(url, productId) {
+  const match = String(url || "").match(/\/upload\/v\d+\/(pawfit\/products\/pending\/[^.?]+)/);
+  if (!match) return null;
+  const sourcePublicId = match[1];
+  const targetPublicId = `pawfit/products/${productId}/${randomUUID()}`;
+  const asset = await cloudinary.uploader.rename(sourcePublicId, targetPublicId, {
+    resource_type: "image", overwrite: false, invalidate: true,
+  });
+  return { url: asset.secure_url, publicId: asset.public_id };
+}
+
 export function uploadModelBuffer(buffer, folder, originalName) {
   const extension = path.extname(originalName).toLowerCase() || ".glb";
   return uploadBuffer(buffer, {
