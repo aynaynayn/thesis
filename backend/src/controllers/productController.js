@@ -62,6 +62,26 @@ async function uniqueSlug(value, omitId) {
   return candidate;
 }
 
+async function finalizeProductImages(product) {
+  const sourceImages = product.images?.length ? product.images : [product.image];
+  const finalAssets = await Promise.all(sourceImages.map(async (url, index) => {
+    const finalized = await finalizePendingImage(url, product._id);
+    return finalized || { url, publicId: product.imagePublicIds?.[index] || (index === 0 ? product.imageCloudinaryPublicId : "") };
+  }));
+  if (finalAssets.some((asset) => asset.url.includes("/pending/"))) throw Object.assign(new Error("A product image could not be finalized"), { statusCode: 502 });
+  product.images = finalAssets.map((asset) => asset.url);
+  product.image = finalAssets[0]?.url || product.image;
+  product.imageCloudinaryPublicId = finalAssets[0]?.publicId || product.imageCloudinaryPublicId;
+  product.imagePublicIds = finalAssets.map((asset) => asset.publicId).filter(Boolean);
+}
+
+async function deleteUnreferencedImages(productId, publicIds) {
+  await Promise.all(publicIds.filter(Boolean).map(async (publicId) => {
+    const referenced = await Product.exists({ _id: { $ne: productId }, $or: [{ imageCloudinaryPublicId: publicId }, { imagePublicIds: publicId }] });
+    if (!referenced) await deleteImageAsset(publicId).catch(() => {});
+  }));
+}
+
 function validateInventory(inventory = []) {
   if (!Array.isArray(inventory) || inventory.length === 0)
     throw Object.assign(
@@ -272,11 +292,7 @@ export async function createProduct(req, res, next) {
     uploadedImagePublicId = data.imageCloudinaryPublicId;
 
     createdProduct = await Product.create(data);
-    const finalAssets = await Promise.all((createdProduct.images?.length ? createdProduct.images : [createdProduct.image]).map(async (url) => (await finalizePendingImage(url, createdProduct._id)) || { url, publicId: url === createdProduct.image ? createdProduct.imageCloudinaryPublicId : "" }));
-    createdProduct.images = finalAssets.map((asset) => asset.url);
-    createdProduct.image = finalAssets[0]?.url || createdProduct.image;
-    createdProduct.imageCloudinaryPublicId = finalAssets[0]?.publicId || createdProduct.imageCloudinaryPublicId;
-    createdProduct.imagePublicIds = finalAssets.map((asset) => asset.publicId).filter(Boolean);
+    await finalizeProductImages(createdProduct);
     await createdProduct.save();
 
     res.status(201).json({ product: createdProduct });
@@ -363,6 +379,7 @@ export async function updateProduct(req, res, next) {
   try {
     const product = await Product.findById(req.params.id);
     if (!product) return res.status(404).json({ message: "Product not found" });
+    const previousImageIds = [product.imageCloudinaryPublicId, ...(product.imagePublicIds || [])];
     for (const field of editableFields)
       if (req.body[field] !== undefined && field !== "slug")
         product[field] = req.body[field];
@@ -374,7 +391,9 @@ export async function updateProduct(req, res, next) {
     if (req.body.category !== undefined)
       product.category = await canonicalCategory(product.category, product._id);
     normalizeProductData(product);
+    await finalizeProductImages(product);
     await product.save();
+    await deleteUnreferencedImages(product._id, previousImageIds.filter((id) => !product.imagePublicIds.includes(id)));
     res.json({ product });
   } catch (error) {
     next(error);
