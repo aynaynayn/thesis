@@ -6,10 +6,9 @@ PawFit is a thesis e-commerce application for dog apparel and accessories. It co
 
 ## Live Site and Screenshots
 
-- Live site: **[Add deployed URL]**
-- Home: `docs/screenshots/home.png`
-- Product page: `docs/screenshots/product.png`
-- Admin: `docs/screenshots/admin.png`
+- Live site: **https://pawfit-shop.vercel.app/**
+- Home: ``
+- Product page: ``
 
 ## Features
 
