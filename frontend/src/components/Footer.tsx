@@ -53,7 +53,6 @@ export default function Footer() {
               ))}
             </div>
           </div>
-          <div><h4 className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-foreground">Stay in the loop</h4><p className="text-sm leading-6 text-muted-foreground">New drops, practical fit notes, and the occasional treat.</p><div className="mt-4 flex border-b border-foreground"><input aria-label="Email for newsletter" placeholder="Your email" className="min-w-0 flex-1 bg-transparent py-2 text-sm outline-none" /><button className="text-xs font-bold uppercase tracking-[0.12em]">Join</button></div></div>
         </div>
         <p className="mt-12 border-t border-border pt-5 text-xs text-muted-foreground">&copy; {new Date().getFullYear()} PawFit. All rights reserved.</p>
       </div>
